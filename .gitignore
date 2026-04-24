@@ -1,6 +1,7 @@
 # Data (lives on cluster)
 data/raw/*
 data/clean/*
+notebooks/simdata/*
 !data/raw/.gitkeep
 !data/clean/.gitkeep
 
