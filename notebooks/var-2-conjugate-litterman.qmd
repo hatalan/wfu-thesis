@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "VAR(2) with Conjugate Priors"
 format: html
 editor: visual
 ---
