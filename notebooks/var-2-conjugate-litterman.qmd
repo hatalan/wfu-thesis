@@ -25,9 +25,9 @@ X <- cbind(1,
 This block sets the "known" sigma's from the data by taking the standard deviation of the residuals for each of the 2 univariate AR processes:
 
 ```{r}
-lambda <- 0.2   # Karlsson's π_1 "overall tightness"
-theta  <- 0.2   # Karlsson's π_2 "cross-variable tightness"
-alpha    <- 1     # Karlsson's π_3 "lag decay rate" (this is the std exponent)
+lambda <- 0.2  
+theta  <- 0.2  
+alpha    <- 1   
 delta  <- rep(1, K)
 sigma <- numeric(K)
 
@@ -40,7 +40,7 @@ B_post     <- matrix(0, nrow = M, ncol = K)
 V_post_lst <- vector("list", K)
 
 for (j in 1:K) {
-    # Step 2: build gamma_bar, tau (used immediately, no need to save)
+    # Step 2: build gamma_bar, tau
     gamma_bar <- numeric(M)
     tau       <- numeric(M)
     tau[1]    <- 1e6
