@@ -39,7 +39,7 @@ model {
         for (i in 1:K) {
             for (j in 1:K) {
                 real prior_mean;
-                real prior_var;
+                real prior_sd;
                 
                 if (i == j && ell == 1) {
                     prior_mean = 1; // defining diagonal mean priors
@@ -48,12 +48,12 @@ model {
                   }
                 
                 if (i == j) {
-                    prior_var = lambda / ell^alpha_lag; // defining diagonal variance priors
+                    prior_sd = lambda / ell^alpha_lag; // defining diagonal variance priors
                 } else {
-                    prior_var = (lambda * theta * sigma[j]) / (ell^alpha_lag * sigma[i]); // defining off-diagonal variance priors
+                    prior_sd = (lambda * theta * sigma[i]) / (ell^alpha_lag * sigma[j]); // defining off-diagonal variance priors
                 }
                 
-                A[ell][i, j] ~ normal(prior_mean, sqrt(prior_var));
+                A[ell][i, j] ~ normal(prior_mean, prior_sd);
             }
         }
     }
