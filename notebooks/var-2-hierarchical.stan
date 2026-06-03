@@ -48,9 +48,9 @@ model {
                   }
                 
                 if (i == j) {
-                    prior_var = lambda^2 / ell^alpha_lag * (1 / sigma[i]^2); // defining diagonal variance priors
+                    prior_var = lambda / ell^alpha_lag; // defining diagonal variance priors
                 } else {
-                    prior_var = lambda^2 * theta^2 / ell^alpha_lag * (sigma[j]^2 / sigma[i]^2); // defining off-diagonal variance priors
+                    prior_var = (lambda * theta * sigma[j]) / (ell^alpha_lag * sigma[i]); // defining off-diagonal variance priors
                 }
                 
                 A[ell][i, j] ~ normal(prior_mean, sqrt(prior_var));

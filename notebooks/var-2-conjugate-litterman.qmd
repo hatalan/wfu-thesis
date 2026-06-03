@@ -9,7 +9,7 @@ editor: visual
 We're going to run some Bayesian VAR(2) models in R (conjugate priors and Minnesota with fixed innovation matrix).
 
 ```{r}
-Y <- as.matrix(read.csv("simdata/Y_sim.csv", header = FALSE, col.names = c("y1", "y2")))
+Y <- as.matrix(read.csv("notebooks/simdata/Y_sim.csv", header = FALSE, col.names = c("y1", "y2")))
 
 T <- nrow(Y) # Number of time periods
 K <- ncol(Y) # Number of variables
