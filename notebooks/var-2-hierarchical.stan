@@ -7,7 +7,7 @@ data {
 
 transformed data {
     vector[K] delta = rep_vector(1.0, K);
-    real alpha_lag = 2.0;
+    real alpha_lag = 1.0;
 }
 
 parameters {
