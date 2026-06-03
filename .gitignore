@@ -13,6 +13,12 @@ slurm/logs/*
 results/*
 !results/.gitkeep
 
+# Ignore compiled Stan models (executable without extension)
+*
+!**/
+!*.*
+*.exe
+
 # macOS
 .DS_Store
 
