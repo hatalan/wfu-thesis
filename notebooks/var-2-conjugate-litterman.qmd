@@ -131,7 +131,7 @@ conj_litter <- function(Y, P, lambda, theta, alpha = 1) {
       B_post[, j]     <- gamma_post
       V_post_lst[[j]] <- V_post
 
-      t(B_post)
+      return(B_post)
   }
 }
 
@@ -150,7 +150,7 @@ for (lambda in lambda_check) {
 
 ```{r}
 
-coef <- conj_litter(Y, P = 2, lambda = lambda, theta = 0.2, alpha = 1)
+coef <- conj_litter(Y, P = 2, lambda = 0.2, theta = 0.2, alpha = 1)
 coef
 
 ```
