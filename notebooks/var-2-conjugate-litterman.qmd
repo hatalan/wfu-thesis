@@ -6,6 +6,7 @@ editor: visual
 
 ```{r}
 library(ggplot2)
+library(tidyverse)
 ```
 
 We're going to run some Bayesian VAR(2) models in R (conjugate priors and Minnesota with fixed innovation matrix).
@@ -153,5 +154,25 @@ B_post_list[1]
 ```
 
 ```{r}
- 
+coef_names <- c("const", "y1.l1", "y2.l1", "y1.l2", "y2.l2")
+eq_names   <- c("y1", "y2")
+
+coef_df <- map2(B_post_list, lambda_check, function(B, lam) {
+  colnames(B) <- coef_names
+  as_tibble(B) %>%
+    mutate(equation = eq_names, lambda = lam)
+}) |>
+  list_rbind() %>%
+  pivot_longer(all_of(coef_names), names_to = "param", values_to = "value")
+
+coef_df %>%
+  filter(param != "const") |>  # const has a near-flat prior (τ=1e6); drop so AR scale is readable
+  ggplot(aes(lambda, value, color = param)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ equation, labeller = label_both) +
+  labs(x = expression(lambda), y = "Posterior mean coefficient",
+       color = "Coefficient",
+       title = "Minnesota tightness vs. posterior coefficients") +
+  theme_minimal()
 ```
