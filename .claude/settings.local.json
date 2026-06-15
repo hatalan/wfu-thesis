@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -v -E '\\\\.\\(DS_Store\\)$')",
+      "Bash(git -C /Users/nicholashatala/Projects/wfu-thesis check-ignore CLAUDE.md)",
+      "Bash(python3 -m py_compile run.py generate_sweep.py)"
+    ]
+  }
+}
