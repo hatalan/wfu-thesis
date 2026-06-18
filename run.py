@@ -13,6 +13,8 @@ Outputs written to --outdir:
 Example:
   python run.py --rate 10 --outdir results/lambda_rate/idx2_rate10
 """
+
+# Import libraries
 import argparse
 import json
 import os
@@ -28,7 +30,7 @@ DEFAULT_CMDSTAN = "/deac/sta/classes/sta720/software/cmdstan/2.37.0"
 DEFAULT_MODEL = Path(__file__).parent / "models" / "var-2-hierarchical.stan"
 DEFAULT_DATA = Path(__file__).parent / "notebooks" / "simdata" / "Y_sim.csv"
 
-
+# Parse parameters, directory for the model
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -55,7 +57,7 @@ def parse_args(argv=None):
                    help="Compile the Stan model and exit (run once before submitting an array)")
     return p.parse_args(argv)
 
-
+# Set where cmdstan lives on DEAC cluster
 def setup_cmdstan(path):
     from cmdstanpy import set_cmdstan_path
     if path and os.path.isdir(path):
@@ -66,6 +68,7 @@ def setup_cmdstan(path):
 
 
 def main(argv=None):
+    # Direct path from cmdstan lives
     args = parse_args(argv)
     from cmdstanpy import CmdStanModel
 
@@ -79,7 +82,7 @@ def main(argv=None):
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    # --- Load data ---
+    # Load data
     header = 0 if args.has_header else None
     Y = pd.read_csv(args.data, header=header).to_numpy(dtype=float)
     T, K = Y.shape
@@ -97,7 +100,7 @@ def main(argv=None):
           f"lambda ~ gamma(shape={args.shape}, rate={args.rate}) "
           f"(prior mean {prior_mean:.4g})", flush=True)
 
-    # --- Fit ---
+    # Fit model to data
     model = CmdStanModel(stan_file=args.model)
     t0 = time.time()
     fit = model.sample(
@@ -111,30 +114,31 @@ def main(argv=None):
     )
     elapsed = time.time() - t0
 
-    # --- Persist results ---
+    # Persist results
     summary = fit.summary()
     summary.to_csv(outdir / "summary.csv")
     fit.draws_pd(vars=["lambda", "theta"]).to_csv(outdir / "lambda_theta.csv", index=False)
     if args.save_draws:
         fit.save_csvfiles(str(outdir))
 
-    # --- Diagnostics (best-effort; never lose a completed fit over these) ---
+    # Diagnostics
     diagnostics = {}
     try:
         diagnostics["num_divergent"] = int(fit.method_variables()["divergent__"].sum())
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         diagnostics["num_divergent"] = None
         diagnostics["divergent_error"] = str(e)
     try:
         diagnostics["max_rhat"] = float(np.nanmax(summary["R_hat"].to_numpy()))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         diagnostics["max_rhat"] = None
         diagnostics["rhat_error"] = str(e)
     try:
         diagnostics["diagnose"] = fit.diagnose()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         diagnostics["diagnose"] = f"diagnose() failed: {e}"
 
+    # Save metadata
     metadata = {
         "data": os.path.abspath(args.data),
         "model": os.path.abspath(args.model),

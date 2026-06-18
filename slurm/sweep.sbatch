@@ -17,28 +17,31 @@
 
 set -euo pipefail
 
-# ---- environment (adjust to your cluster setup) ----
+# Environment
 export CMDSTAN=${CMDSTAN:-/deac/sta/classes/sta720/software/cmdstan/2.37.0}
-# module load python/3.11    # uncomment / edit for your cluster
-# source .venv/bin/activate   # uncomment if you use a venv with cmdstanpy installed
+module load python/3.14.5 
+source .venv/bin/activate
 
 SWEEP=${SWEEP:-configs/sweeps/lambda_rate.csv}
 DATA=${DATA:-notebooks/simdata/Y_sim.csv}
 SWEEP_NAME=$(basename "$SWEEP" .csv)
 
-# ---- pick this task's row by idx ----
+# Pick job tasks by row in SLURM array
 ROW=$(awk -F, -v id="$SLURM_ARRAY_TASK_ID" 'NR>1 && $1==id {print; exit}' "$SWEEP")
 if [[ -z "$ROW" ]]; then
   echo "No row with idx=$SLURM_ARRAY_TASK_ID in $SWEEP" >&2
   exit 1
 fi
+
+# Extract hyperparameters
 SHAPE=$(echo "$ROW" | cut -d, -f2)
 RATE=$(echo "$ROW" | cut -d, -f3)
 
+# Tasks write to results folder, including an .out log
 OUTDIR="results/${SWEEP_NAME}/idx${SLURM_ARRAY_TASK_ID}_rate${RATE}"
-
 echo "[sbatch] task ${SLURM_ARRAY_TASK_ID}: shape=${SHAPE} rate=${RATE} -> ${OUTDIR}"
 
+# Hand off to run.py
 python run.py \
   --data "$DATA" \
   --shape "$SHAPE" \
