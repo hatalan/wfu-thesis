@@ -7,6 +7,7 @@ editor: visual
 ```{r}
 library(ggplot2)
 library(tidyverse)
+library(jsonlite)
 ```
 
 We're going to run some Bayesian VAR(2) models in R (conjugate priors and Minnesota with fixed innovation matrix).
@@ -165,7 +166,7 @@ coef_df <- map2(B_post_list, lambda_check, function(B, lam) {
   list_rbind() %>%
   pivot_longer(all_of(coef_names), names_to = "param", values_to = "value")
 
-coef_df %>%
+p_conj <- coef_df %>%
   filter(param != "const") |>  # const has a near-flat prior (τ=1e6); drop so AR scale is readable
   ggplot(aes(lambda, value, color = param)) +
   geom_line() +
@@ -174,5 +175,41 @@ coef_df %>%
   labs(x = expression(lambda), y = "Posterior mean coefficient",
        color = "Coefficient",
        title = "Minnesota tightness vs. posterior coefficients") +
+  coord_cartesian(xlim = c(0, 0.85), ylim = c(-0.5, 1.1)) +
   theme_minimal()
+
+ggsave("figures/coef_conjugate.png", p_conj, width = 9, height = 4, dpi = 150)
+```
+
+```{r}
+sweep_dir <- "results/lambda_rate"
+
+hier_coef <- list.dirs(sweep_dir, recursive = FALSE) |>
+  map(function(d) {
+    meta <- fromJSON(file.path(d, "metadata.json"))
+    summ <- read_csv(file.path(d, "summary.csv"), show_col_types = FALSE)
+    names(summ)[1] <- "param"
+    summ |>
+      filter(str_detect(param, "^A\\[")) |>
+      transmute(param, value = Mean,
+                prior_mean = meta$lambda_prior_mean,
+                post_lambda = meta$lambda_post_mean)
+  }) |>
+  list_rbind() |>
+  extract(param, into = c("lag", "eq", "var"),
+          regex = "A\\[(\\d+),(\\d+),(\\d+)\\]", convert = TRUE) |>
+  mutate(equation = paste0("y", eq),
+         param    = paste0("y", var, ".l", lag))
+
+p_hier <- hier_coef |>
+  ggplot(aes(prior_mean, value, color = param)) +
+  geom_line() + geom_point() +
+  facet_wrap(~ equation, labeller = label_both) +
+  labs(x = expression(lambda ~ "prior mean (shape/rate)"), y = "Posterior mean coefficient",
+       color = "Coefficient", title = "Hierarchical Stan") +
+  coord_cartesian(xlim = c(0, 0.85), ylim = c(-0.5, 1.1)) +
+  theme_minimal()
+
+p_hier
+ggsave("figures/coef_hierarchical.png", p_hier, width = 9, height = 4, dpi = 150)
 ```
