@@ -19,7 +19,7 @@ set -euo pipefail
 
 # Environment
 export CMDSTAN=${CMDSTAN:-/deac/sta/classes/sta720/software/cmdstan/2.37.0}
-module load python/3.14.5 
+module load apps/python/3.14.5 
 source .venv/bin/activate
 
 SWEEP=${SWEEP:-configs/sweeps/lambda_rate.csv}

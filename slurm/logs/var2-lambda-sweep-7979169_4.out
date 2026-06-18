@@ -1,0 +1,28 @@
+#########################BEGIN-PROLOG#########################
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-amd-19
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-amd-18
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-amd-18
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-amd-07
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-amd-07
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+###########################END-PROLOG#########################
+ERROR: Unable to locate a modulefile for 'python/3.14.5'

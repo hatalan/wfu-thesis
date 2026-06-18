@@ -1,0 +1,4 @@
+[sbatch] task 0: shape=2.0 rate=2.5 -> results/lambda_rate/idx0_rate2.5
+[run] cmdstan path: /deac/sta/classes/sta720/software/cmdstan/2.37.0
+[run] data=notebooks/simdata/Y_sim.csv T=200 K=2 P=2 | lambda ~ gamma(shape=2.0, rate=2.5) (prior mean 0.8)
+[run] done in 20.5s | lambda post mean 0.575 | divergences 0 | max R-hat 1.00373 | -> results/lambda_rate/idx0_rate2.5

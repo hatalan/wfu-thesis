@@ -36,7 +36,7 @@ COMPILE_JID=$(sbatch --parsable \
   --nodes=1 --ntasks-per-node=1 --cpus-per-task=2 --mem=2GB --time=00-00:20:00 \
   --output=slurm/logs/%x-%j.out --error=slurm/logs/%x-%j.err \
   --export=ALL,CMDSTAN="$CMDSTAN" \
-  --wrap="module load apps/python/3.14.5 && source .venv/bin/activate && python run.py --rate 1 --compile-only"
+  --wrap="module load apps/python/3.14.5 && source .venv/bin/activate && python run.py --rate 1 --outdir /tmp/compile --compile-only")
 echo "[submit] compile job: $COMPILE_JID"
 
 # Submit the array, held until compile succeeds

@@ -1,0 +1,31 @@
+#########################BEGIN-PROLOG#########################
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-intel-18
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-intel-18
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-intel-18
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-amd-07
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+JobName   = var2-lambda-sweep
+Account   = cademartorigrp
+NodeList  = cpu-amd-07
+Resources = cpu=4,mem=4G,node=1,billing=4
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+###########################END-PROLOG#########################
+[sbatch] task 4: shape=2.0 rate=40.0 -> results/lambda_rate/idx4_rate40.0
+[run] cmdstan path: /deac/sta/classes/sta720/software/cmdstan/2.37.0
+[run] data=notebooks/simdata/Y_sim.csv T=200 K=2 P=2 | lambda ~ gamma(shape=2.0, rate=40.0) (prior mean 0.05)
+[run] done in 32.1s | lambda post mean 0.2761 | divergences 0 | max R-hat 1.00339 | -> results/lambda_rate/idx4_rate40.0

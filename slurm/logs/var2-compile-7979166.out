@@ -1,0 +1,7 @@
+#########################BEGIN-PROLOG#########################
+JobName   = var2-compile
+Account   = cademartorigrp
+NodeList  = cpu-amd-07
+Resources = cpu=2,mem=2G,node=1,billing=2
+WorkDir   = /deac/sta/cademartoriGrp/hatan25/wfu-thesis
+###########################END-PROLOG#########################
