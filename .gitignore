@@ -57,4 +57,4 @@ notebooks/*.html
 *.swp
 
 # Claude Code scratch notes (placed last so the "!*.*" rule above does not re-include it)
-CLAUDE.md
+.claude/
