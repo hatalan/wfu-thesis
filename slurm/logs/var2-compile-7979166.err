@@ -1,6 +1,0 @@
-usage: run.py [-h] [--data DATA] [--has-header] [--lags LAGS] [--shape SHAPE]
-              --rate RATE [--model MODEL] --outdir OUTDIR [--cmdstan CMDSTAN]
-              [--chains CHAINS] [--iter-warmup ITER_WARMUP]
-              [--iter-sampling ITER_SAMPLING] [--seed SEED] [--save-draws]
-              [--compile-only]
-run.py: error: the following arguments are required: --outdir
