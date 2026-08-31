@@ -1,23 +1,57 @@
-# Data (lives on cluster)
+# =============================================================
+# ORDER MATTERS: .gitignore is last-match-wins. The "!*.*"
+# re-include below cancels any ignore rule ABOVE it, so this
+# compiled-binary block must stay at the top of the file.
+# =============================================================
+
+# Compiled Stan model binaries (cmdstan writes an extensionless
+# executable next to the .stan source; .exe on Windows)
+*
+!**/
+!*.*
+*.exe
+
+# ---- Data (lives on cluster) ----
 data/raw/*
 data/clean/*
-notebooks/simdata/*
 !data/raw/.gitkeep
 !data/clean/.gitkeep
 
-# SLURM logs
-slurm/logs/*
-!slurm/logs/.gitkeep
+# Large data formats, wherever they land
+*.xlsx
+*.xls
+*.parquet
+*.feather
+*.dta
+*.sav
+*.rds
+*.RData
+*.h5
+*.hdf5
+*.nc
+*.zip
+*.gz
+*.tar
+*.7z
+
+# ---- Posterior fits / sampler output ----
+# cmdstanr writes one CSV per chain, plus console logs
+**/fits/*
+!**/fits/.gitkeep
+notebooks/simdata/*
+!notebooks/simdata/.gitkeep
+*-stdout.txt
+*-stderr.txt
+*-diagnostic.csv
+*.csv.gz
 
 # Model output
 results/*
 !results/.gitkeep
 
-# Ignore compiled Stan models (executable without extension)
-*
-!**/
-!*.*
-*.exe
+# ---- SLURM logs ----
+slurm/logs/*
+!slurm/logs/.gitkeep
 
 # macOS
 .DS_Store
