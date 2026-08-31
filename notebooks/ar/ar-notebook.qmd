@@ -87,3 +87,58 @@ ppc_intervals(y = obs_acf, yrep = sim_acf, x = lags) +
   ggplot2::labs(x = "Lag", y = "Autocorrelation")
 ```
 
+```{r}
+stan_data <- list(
+  T       = nrow(umich),
+  Y       = umich$ld_index,
+  p       = 4,
+  sigma_sd = sd(umich$ld_index),
+  phi_sd   = 0.5,
+  cons = rep(1, 4),
+  mean_R2 = 0.975,
+  prec_R2 = 0.05
+)
+
+
+mod <- cmdstan_model(
+  "models/arr2.stan",
+  stanc_options = list("O1", "warn-pedantic" = TRUE)
+)
+
+fit <- mod$sample(
+  data            = stan_data,
+  seed            = 20260830,
+  chains          = 4,
+  parallel_chains = 4,
+  iter_warmup     = 1000,
+  iter_sampling   = 1000,
+  adapt_delta     = 0.9,
+  refresh         = 500
+)
+```
+
+```{r}
+fit$diagnostic_summary()
+fit$summary(c("alpha", "phi", "sigma"))
+```
+
+```{r}
+dir.create("fits", showWarnings = FALSE)
+fit$save_output_files(dir = "fits", basename = "arr2",
+                      timestamp = FALSE, random = FALSE)
+```
+
+```{r}
+library(bayesplot)
+
+ysim <- fit$draws("Y_sim", format = "draws_matrix")   # draws × T
+lags <- 1:16
+
+acf_of  <- function(v) acf(v, lag.max = max(lags), plot = FALSE)$acf[lags + 1]
+sim_acf <- t(apply(ysim, 1, acf_of))                  # draws × 16
+obs_acf <- acf_of(umich$ld_index)                              # length 16
+
+ppc_intervals(y = obs_acf, yrep = sim_acf, x = lags) +
+  ggplot2::labs(x = "Lag", y = "Autocorrelation")
+```
+
