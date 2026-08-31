@@ -58,13 +58,11 @@ generated quantities {
   vector[T - p] Y_rep;
   vector[T]     Y_sim;
 
-  // one-step-ahead: reuses mu, which is already conditioned on observed lags
   for (t in (p + 1):T) {
     log_lik[t - p] = normal_lpdf(Y[t] | mu[t], sigma);
     Y_rep[t - p]   = normal_rng(mu[t], sigma);
   }
 
-  // free-running: feeds the model its own simulated values
   Y_sim[1:p] = Y[1:p];
   for (t in (p + 1):T) {
     real m = alpha;
