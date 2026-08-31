@@ -39,9 +39,9 @@ ggplot(umich, aes(date, ld_index)) +
 ```{r}
 stan_data <- list(
   T       = nrow(umich),
-  Y       = umich$ld_index,
+  Y       = umich$Index,
   p       = 4,
-  sigma_sd = sd(umich$ld_index),
+  sigma_sd = sd(umich$Index),
   phi_sd   = 0.5
 )
 
@@ -81,7 +81,7 @@ lags <- 1:16
 
 acf_of  <- function(v) acf(v, lag.max = max(lags), plot = FALSE)$acf[lags + 1]
 sim_acf <- t(apply(ysim, 1, acf_of))                  # draws × 16
-obs_acf <- acf_of(umich$ld_index)                              # length 16
+obs_acf <- acf_of(umich$Index)                              # length 16
 
 ppc_intervals(y = obs_acf, yrep = sim_acf, x = lags) +
   ggplot2::labs(x = "Lag", y = "Autocorrelation")
@@ -90,13 +90,13 @@ ppc_intervals(y = obs_acf, yrep = sim_acf, x = lags) +
 ```{r}
 stan_data <- list(
   T       = nrow(umich),
-  Y       = umich$ld_index,
+  Y       = umich$Index,
   p       = 4,
-  sigma_sd = sd(umich$ld_index),
+  sigma_sd = sd(umich$Index),
   phi_sd   = 0.5,
   cons = rep(1, 4),
-  mean_R2 = 0.975,
-  prec_R2 = 0.05
+  mean_R2 = 0.75,
+  prec_R2 = 3
 )
 
 
@@ -136,7 +136,7 @@ lags <- 1:16
 
 acf_of  <- function(v) acf(v, lag.max = max(lags), plot = FALSE)$acf[lags + 1]
 sim_acf <- t(apply(ysim, 1, acf_of))                  # draws × 16
-obs_acf <- acf_of(umich$ld_index)                              # length 16
+obs_acf <- acf_of(umich$Index)                              # length 16
 
 ppc_intervals(y = obs_acf, yrep = sim_acf, x = lags) +
   ggplot2::labs(x = "Lag", y = "Autocorrelation")
