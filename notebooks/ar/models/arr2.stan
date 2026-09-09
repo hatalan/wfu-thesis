@@ -54,14 +54,7 @@ model {
 }
 
 generated quantities {
-  vector[T - p] log_lik;
-  vector[T - p] Y_rep;
   vector[T]     Y_sim;
-
-  for (t in (p + 1):T) {
-    log_lik[t - p] = normal_lpdf(Y[t] | mu[t], sigma);
-    Y_rep[t - p]   = normal_rng(mu[t], sigma);
-  }
 
   Y_sim[1:p] = Y[1:p];
   for (t in (p + 1):T) {
