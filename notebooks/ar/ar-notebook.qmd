@@ -16,7 +16,67 @@ library(posterior)
 library(bayesplot)
 ```
 
-### Loading data and looking at it
+### Testing cmdstanr on simulated data
+
+```{r}
+fit <- cmdstanr_example("logistic", chains = 2)
+fit$summary()
+```
+
+### Simulating AR(1) data
+
+```{r}
+phi <- c(0.5, 0.25, 0.2)
+roots <- polyroot(c(1, -phi))
+magnitudes <- Mod(roots)
+magnitudes
+
+ar3_data <- arima.sim(model = list(ar = phi), n = 200, sd = 1)
+```
+
+### Fitting AR model to simulated data
+
+```{r}
+stan_data <- list(
+  T       = length(ar3_data),
+  Y       = as.numeric(ar3_data),
+  p       = 3,
+  sigma_sd = sd(as.numeric(ar3_data)),
+  phi_sd   = 0.5
+)
+
+
+mod <- cmdstan_model(
+  "models/ar.stan",
+  stanc_options = list("O1", "warn-pedantic" = TRUE)
+)
+
+fit <- mod$sample(
+  data = stan_data
+)
+```
+
+### Posterior analysis of simulation
+
+```{r}
+fit$summary(c("alpha", "phi", "sigma"))
+```
+
+```{r}
+ysim <- fit$draws("Y_sim", format = "draws_matrix")
+lags <- 1:16
+
+acf_of  <- function(v) acf(v, lag.max = max(lags), plot = FALSE)$acf[lags + 1]
+sim_acf <- t(apply(ysim, 1, acf_of))
+obs_acf <- acf_of(as.numeric(ar3_data))
+
+ppc_intervals(y = obs_acf, yrep = sim_acf, x = lags) +
+  ggplot2::labs(x = "Lag", y = "Autocorrelation")
+
+acf(ar3_data, lag.max = 16, plot = FALSE)$acf[1:16 + 1]
+```
+
+### Loading UMich data and doing EDA
 
 ```{r}
 umich <- read.csv("../../data/raw/sca-table1-on-2026-Aug-30.csv")
@@ -67,6 +127,7 @@ fit <- mod$sample(
 fit$diagnostic_summary()
 fit$summary(c("alpha", "phi", "sigma"))
 ```
+
 ```{r}
 dir.create("fits", showWarnings = FALSE)
 fit$save_output_files(dir = "fits", basename = "ar4",
@@ -74,8 +135,6 @@ fit$save_output_files(dir = "fits", basename = "ar4",
 ```
 
 ```{r}
-library(bayesplot)
-
 ysim <- fit$draws("Y_sim", format = "draws_matrix")   # draws × T
 lags <- 1:16
 
@@ -141,4 +200,3 @@ obs_acf <- acf_of(umich$Index)                              # length 16
 ppc_intervals(y = obs_acf, yrep = sim_acf, x = lags) +
   ggplot2::labs(x = "Lag", y = "Autocorrelation")
 ```
-
