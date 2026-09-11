@@ -50,7 +50,7 @@ model {
   target += arr2_ncp_lpdf(phi_z | psi, R2, sigma, sigma_sd, mean_R2, prec_R2, cons, var_y);
   target += normal_lpdf(alpha | 0, 1);
   // likelihood
-  target += normal_lpdf(Y | mu, sigma);
+  target += normal_lpdf(Y[(p+1):T] | mu[(p+1):T], sigma);
 }
 
 generated quantities {

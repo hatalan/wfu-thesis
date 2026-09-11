@@ -56,7 +56,52 @@ fit <- mod$sample(
 )
 ```
 
-### Posterior analysis of simulation
+### Posterior analysis of model
+
+```{r}
+fit$summary(c("alpha", "phi", "sigma"))
+```
+
+```{r}
+ysim <- fit$draws("Y_sim", format = "draws_matrix")
+lags <- 1:16
+
+acf_of  <- function(v) acf(v, lag.max = max(lags), plot = FALSE)$acf[lags + 1]
+sim_acf <- t(apply(ysim, 1, acf_of))
+obs_acf <- acf_of(as.numeric(ar3_data))
+
+ppc_intervals(y = obs_acf, yrep = sim_acf, x = lags) +
+  ggplot2::labs(x = "Lag", y = "Autocorrelation")
+
+acf(ar3_data, lag.max = 16, plot = FALSE)$acf[1:16 + 1]
+```
+
+### Fitting ARR2 model to simmed data
+
+```{r}
+stan_data <- list(
+  T       = length(ar3_data),
+  Y       = as.numeric(ar3_data),
+  p       = 3,
+  sigma_sd = sd(as.numeric(ar3_data)),
+  phi_sd   = 0.5,
+  cons = rep(1, 3),
+  mean_R2 = 0.6,
+  prec_R2 = 10.5
+)
+
+
+mod <- cmdstan_model(
+  "models/arr2.stan",
+  stanc_options = list("O1", "warn-pedantic" = TRUE)
+)
+
+fit <- mod$sample(
+  data = stan_data
+)
+```
+
+### Posterior analysis of model
 
 ```{r}
 fit$summary(c("alpha", "phi", "sigma"))
