@@ -1,0 +1,22 @@
+---
+title: "ar-notebook"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+```{r}
+suppressWarnings(nyfed <- read_excel("../data/raw/FRBNY-SCE-Public-Microdata-Complete-13-16.xlsx", skip=1))
+```
+
+```{r}
+nyfed$date <- as.Date(paste0(nyfed$date, "01"), format = "%Y%m%d")
+hist(nyfed$date)
+
+nyfed %>% count(date, `_STATE`)
+```
+
