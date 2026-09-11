@@ -40,8 +40,9 @@ transformed parameters {
 
   vector[T] mu = rep_vector(0.0, T);
   for (t in (p+1):T) {
+    mu[t] += alpha;
     for (i in 1:p) {
-      mu[t] += alpha + phi[i] * Y[t-i];
+      mu[t] += phi[i] * Y[t-i];
     }
   }
 }
@@ -55,6 +56,7 @@ model {
 
 generated quantities {
   vector[T]     Y_sim;
+  vector[T]     Y_rep;
 
   Y_sim[1:p] = Y[1:p];
   for (t in (p + 1):T) {
@@ -62,5 +64,13 @@ generated quantities {
     for (i in 1:p)
       m += phi[i] * Y_sim[t - i];
     Y_sim[t] = normal_rng(m, sigma);
+  }
+
+  Y_rep[1:p] = Y[1:p];
+  for (t in (p + 1):T) {
+    real m = alpha;
+    for (i in 1:p)
+      m += phi[i] * Y[t - i];
+    Y_rep[t] = normal_rng(m, sigma);
   }
 }

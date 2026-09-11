@@ -41,4 +41,14 @@ generated quantities {
       m += phi[i] * Y_sim[t - i];
     Y_sim[t] = normal_rng(m, sigma);
   }
+  
+  vector[T]     Y_rep;
+
+  Y_rep[1:p] = Y[1:p];
+  for (t in (p + 1):T) {
+    real m = alpha;
+    for (i in 1:p)
+      m += phi[i] * Y[t - i];
+    Y_rep[t] = normal_rng(m, sigma);
+  }
 }

@@ -31,8 +31,14 @@ roots <- polyroot(c(1, -phi))
 magnitudes <- Mod(roots)
 magnitudes
 
-ar3_data <- arima.sim(model = list(ar = phi), n = 200, sd = 1)
+set.seed(123)
+ar3_data <- arima.sim(model = list(ar = phi), n = 200, sd = 10)
 ```
+
+```{r}
+plot(ar3_data)
+```
+
 
 ### Fitting AR model to simulated data
 
@@ -63,14 +69,14 @@ fit$summary(c("alpha", "phi", "sigma"))
 ```
 
 ```{r}
-ysim <- fit$draws("Y_sim", format = "draws_matrix")
+yrep <- fit$draws("Y_rep", format = "draws_matrix")
 lags <- 1:16
 
 acf_of  <- function(v) acf(v, lag.max = max(lags), plot = FALSE)$acf[lags + 1]
-sim_acf <- t(apply(ysim, 1, acf_of))
+rep_acf <- t(apply(yrep, 1, acf_of))
 obs_acf <- acf_of(as.numeric(ar3_data))
 
-ppc_intervals(y = obs_acf, yrep = sim_acf, x = lags) +
+ppc_intervals(y = obs_acf, yrep = rep_acf, x = lags) +
   ggplot2::labs(x = "Lag", y = "Autocorrelation")
 
 acf(ar3_data, lag.max = 16, plot = FALSE)$acf[1:16 + 1]
