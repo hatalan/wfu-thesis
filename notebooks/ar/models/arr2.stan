@@ -19,6 +19,7 @@ data {
   real<lower=0> mean_R2; // mean of the R2 prior
   real<lower=0> prec_R2; // precision of the R2 prior
   real<lower=0> sigma_sd; // sd of sigma prior
+  int<lower=0, upper=1> prior_only;
 }
 
 transformed data {
@@ -51,20 +52,24 @@ model {
   target += arr2_ncp_lpdf(phi_z | psi, R2, sigma, sigma_sd, mean_R2, prec_R2, cons, var_y);
   target += normal_lpdf(alpha | 0, 1);
   // likelihood
-  target += normal_lpdf(Y[(p+1):T] | mu[(p+1):T], sigma);
+  if (!prior_only)
+    target += normal_lpdf(Y[(p+1):T] | mu[(p+1):T], sigma);
 }
 
 generated quantities {
   vector[T]     Y_sim;
-  vector[T]     Y_rep;
-
+  vector[T]     mu_sim;
+  
   Y_sim[1:p] = Y[1:p];
   for (t in (p + 1):T) {
     real m = alpha;
     for (i in 1:p)
       m += phi[i] * Y_sim[t - i];
+    mu_sim[t] = m;
     Y_sim[t] = normal_rng(m, sigma);
   }
+  
+  vector[T]     Y_rep;
 
   Y_rep[1:p] = Y[1:p];
   for (t in (p + 1):T) {
@@ -73,4 +78,10 @@ generated quantities {
       m += phi[i] * Y[t - i];
     Y_rep[t] = normal_rng(m, sigma);
   }
+  
+  real var_mu_sim = variance(mu_sim[(p+1):T]);
+  real R2_sim  = var_mu_sim / (var_mu_sim + square(sigma));
+
+  real var_mu  = variance(mu[(p+1):T]);
+  real R2_data = var_mu / (var_mu + square(sigma));
 }

@@ -4,6 +4,7 @@ data {
   int<lower=1> p; // AR order
   real<lower=0> sigma_sd; // sd of sigma prior (shared with arr2.stan)
   real<lower=0> phi_sd; // sd of the naive independent prior on phi
+  int<lower=0, upper=1> prior_only;
 }
 
 parameters {
@@ -28,17 +29,20 @@ model {
   target += normal_lpdf(phi | 0, phi_sd);
   target += normal_lpdf(sigma | 0, sigma_sd);
   // likelihood
-  target += normal_lpdf(Y[(p+1):T] | mu[(p+1):T], sigma);
+  if (!prior_only)
+    target += normal_lpdf(Y[(p+1):T] | mu[(p+1):T], sigma);
 }
 
 generated quantities {
   vector[T]     Y_sim;
-
+  vector[T]     mu_sim;
+  
   Y_sim[1:p] = Y[1:p];
   for (t in (p + 1):T) {
     real m = alpha;
     for (i in 1:p)
       m += phi[i] * Y_sim[t - i];
+    mu_sim[t] = m;
     Y_sim[t] = normal_rng(m, sigma);
   }
   
@@ -51,4 +55,10 @@ generated quantities {
       m += phi[i] * Y[t - i];
     Y_rep[t] = normal_rng(m, sigma);
   }
+  
+  real var_mu_sim = variance(mu_sim[(p+1):T]);
+  real R2_sim  = var_mu_sim / (var_mu_sim + square(sigma));
+
+  real var_mu  = variance(mu[(p+1):T]);
+  real R2_data = var_mu / (var_mu + square(sigma));
 }
