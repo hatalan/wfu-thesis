@@ -34,10 +34,10 @@ model {
 }
 
 generated quantities {
-  vector[T]     Y_sim;
-  vector[T]     mu_sim;
+  vector[T]     Y_sim = rep_vector(0.0, T);
+  vector[T]     Y_rep = rep_vector(0.0, T);
+  vector[T]     mu_sim = rep_vector(0.0, T);
   
-  Y_sim[1:p] = Y[1:p];
   for (t in (p + 1):T) {
     real m = alpha;
     for (i in 1:p)
@@ -45,10 +45,7 @@ generated quantities {
     mu_sim[t] = m;
     Y_sim[t] = normal_rng(m, sigma);
   }
-  
-  vector[T]     Y_rep;
 
-  Y_rep[1:p] = Y[1:p];
   for (t in (p + 1):T) {
     real m = alpha;
     for (i in 1:p)

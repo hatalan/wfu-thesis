@@ -17,28 +17,17 @@ library(bayesplot)
 ```
 
 ```{r}
-# Prior draws from models/ar.stan and models/arr2.stan across lag orders.
-# Requires the `prior_only` flag added to both models.
-#
-# Drop in notebooks/ar/ and source().
-
-## ---- reference series ---------------------------------------------------
-## Y is still passed in: ARR2 uses var(Y) in its transform, and both models
-## take sigma_sd = sd(Y). The likelihood is switched off, nothing else is.
-
 umich <- read.csv("../../data/raw/sca-table1-on-2026-Aug-30.csv")
 Y <- umich$Index
 
-## ---- compile once -------------------------------------------------------
+## Compile models
 
 mod_ar   <- cmdstan_model("models/ar.stan",
                           stanc_options = list("O1", "warn-pedantic" = TRUE))
 mod_arr2 <- cmdstan_model("models/arr2.stan",
                           stanc_options = list("O1", "warn-pedantic" = TRUE))
 
-## ---- stationarity check -------------------------------------------------
-## Same idiom as the top of ar-notebook.qmd: roots of 1 - phi_1 z - ... - phi_p z^p
-## must lie outside the unit circle.
+## Stationarity checks
 
 is_stationary <- function(ph) {
   if (any(!is.finite(ph))) return(NA)
@@ -47,7 +36,7 @@ is_stationary <- function(ph) {
 
 minnesota_cons <- function(p) (p^2 / 10) * (1 / (1:p)^2)
 
-## ---- configurations -----------------------------------------------------
+## Configurations
 
 p_grid <- c(3, 10, 15)
 
@@ -56,15 +45,13 @@ configs <- list(
        data = function(p) list(phi_sd = 1.0)),
   list(label = "naive (sd = 0.5)", model = mod_ar,
        data = function(p) list(phi_sd = 0.5)),
-  list(label = "ARR2 0.60 flat", model = mod_arr2,
-       data = function(p) list(cons = rep(1, p), mean_R2 = 0.60, prec_R2 = 10.5)),
-  list(label = "ARR2 0.60 Minn.", model = mod_arr2,
-       data = function(p) list(cons = minnesota_cons(p), mean_R2 = 0.60, prec_R2 = 10.5)),
+  list(label = "ARR2 0.33 flat", model = mod_arr2,
+       data = function(p) list(cons = rep(1, p), mean_R2 = 1/3, prec_R2 = 3)),
   list(label = "ARR2 0.33 Minn.", model = mod_arr2,
        data = function(p) list(cons = minnesota_cons(p), mean_R2 = 1/3, prec_R2 = 3))
 )
 
-## ---- run ----------------------------------------------------------------
+## Running sweep
 
 dir.create("results", showWarnings = FALSE)
 dir.create("figures", showWarnings = FALSE)
@@ -91,15 +78,23 @@ results <- map_dfr(p_grid, function(p) {
     )
 
     phi_draws <- fit$draws("phi", format = "draws_matrix")
-    stat      <- apply(phi_draws, 1, is_stationary)
+    
+    gq <- fit$draws(c("R2_sim", "R2_data"), format = "draws_df") %>%
+      as_tibble() %>%
+      select(R2_sim, R2_data)
+    
+    stat <- apply(phi_draws, 1, is_stationary)
 
     diag <- fit$diagnostic_summary(quiet = TRUE)
 
     draws_list[[paste(cfg$label, p)]] <<- tibble(
       config = cfg$label, p = p,
       draw = seq_along(stat), stationary = stat,
+      R2_sim = gq$R2_sim,
+      R2_data = gq$R2_data,
       max_mod = apply(phi_draws, 1, function(ph)
         if (any(!is.finite(ph))) NA_real_ else max(Mod(polyroot(c(1, -ph)))))
+      
     )
 
     n_ok <- sum(!is.na(stat))
@@ -111,6 +106,11 @@ results <- map_dfr(p_grid, function(p) {
       n_draws     = length(stat),
       n_finite    = n_ok,
       prop_stat   = p_stat,
+      n_R2_sim    = sum(stat & is.finite(gq$R2_sim), na.rm = TRUE),
+      R2_sim_med  = median(gq$R2_sim[stat], na.rm = TRUE),
+      R2_sim_q05  = quantile(gq$R2_sim[stat], 0.05, na.rm = TRUE),
+      R2_sim_q95  = quantile(gq$R2_sim[stat], 0.95, na.rm = TRUE),
+      R2_nom_med  = median(R2_nom, na.rm = TRUE),
       mcse        = sqrt(p_stat * (1 - p_stat) / n_ok),
       divergences = sum(diag$num_divergent),
       max_rhat    = max(fit$summary("phi")$rhat, na.rm = TRUE)

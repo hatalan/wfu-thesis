@@ -19,4 +19,3 @@ hist(nyfed$date)
 
 nyfed %>% count(date, `_STATE`)
 ```
-
