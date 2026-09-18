@@ -71,7 +71,7 @@ results <- map_dfr(p_grid, function(p) {
       data            = stan_data,
       chains          = 4,
       iter_warmup     = 1000,
-      iter_sampling   = 2500,
+      iter_sampling   = 1000,
       refresh         = 0,
       show_messages   = FALSE,
       show_exceptions = FALSE
@@ -110,7 +110,6 @@ results <- map_dfr(p_grid, function(p) {
       R2_sim_med  = median(gq$R2_sim[stat], na.rm = TRUE),
       R2_sim_q05  = quantile(gq$R2_sim[stat], 0.05, na.rm = TRUE),
       R2_sim_q95  = quantile(gq$R2_sim[stat], 0.95, na.rm = TRUE),
-      R2_nom_med  = median(R2_nom, na.rm = TRUE),
       mcse        = sqrt(p_stat * (1 - p_stat) / n_ok),
       divergences = sum(diag$num_divergent),
       max_rhat    = max(fit$summary("phi")$rhat, na.rm = TRUE)
@@ -125,7 +124,7 @@ print(results %>% mutate(across(where(is.numeric), ~ round(.x, 4))), n = Inf)
 write_csv(results, "results/prior_stationarity.csv")
 write_csv(all_draws, "results/prior_draws_stationary.csv")
 
-## ---- plot ---------------------------------------------------------------
+## Plot
 
 p_plot <- results %>%
   ggplot(aes(p, prop_stat, color = config)) +
@@ -142,3 +141,11 @@ ggsave("figures/prior_stationarity.png", p_plot, width = 8, height = 4.5, dpi = 
 
 p_plot
 ```
+
+```{r}
+hist <- all_draws %>%
+       filter(config == "ARR2 0.33 Minn.", p == 3, stationary == TRUE)
+
+summary(hist$R2_sim)
+```
+

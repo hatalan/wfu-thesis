@@ -35,6 +35,7 @@ parameters {
   real alpha; // intercept
   vector[p] phi_z;
 }
+
 transformed parameters {
   vector[p] phi;
   phi = sqrt(sigma^2 / var_y * (R2 / (1 - R2)) * psi) .* phi_z;
