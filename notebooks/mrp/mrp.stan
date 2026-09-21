@@ -1,11 +1,11 @@
 data {
   int<lower=0> N;
-  array[N] int<lower=1, upper=4> income;
-  array[N] int<lower=1, upper=4> education;
-  array[N] int<lower=1>, <upper=4> age;
-  array[N] int<lower=1>, <upper=51> state;  
+  array[N] int<lower=1, upper=3> income;
+  array[N] int<lower=1, upper=3> education;
+  array[N] int<lower=1, <upper=3> age;
+  array[N] int<lower=1, <upper=51> state;  
   array[N] int<lower=0>, y;
-  array[4, 4, 3, 4, 52] int<lower=0> P;
+  array[3, 3, 3, 51] real<lower=0> P;
 }
 
 parameters {
@@ -20,11 +20,6 @@ parameters {
   vector<multiplier=sigma_beta_4>[4] beta_4;
 }
 
-transformed parameters {
-  vector<multiplier=sigma_alpha>[K] alpha
-    = append_row(alpha_raw, -sum(alpha_raw));
-}
-
 model {
   y ~ bernoulli_logit(alpha + beta_1[income] + beta_2[education] + beta_3[age] + beta_4[state]);
   alpha ~ normal(0, 2);
@@ -37,14 +32,14 @@ model {
 
 generated quantities {
   real expect_pos = 0;
-  int total = 0;
-  for (b in 1:4) {
-    for (c in 1:4) {
-      for (d in 1:4) {
+  real total = 0;
+  for (b in 1:3) {
+    for (c in 1:3) {
+      for (d in 1:3) {
         for( e in 1:51) {
           total += P[b, c, d];
           expect_pos += P[b, c, d]
-            * inv_logit(alpha + beta_1[b] + beta_2[c] + beta_3[d], beta_4);
+            * inv_logit(alpha + beta_1[b] + beta_2[c] + beta_3[d] + beta_4[e]);
         }
       }
     }
