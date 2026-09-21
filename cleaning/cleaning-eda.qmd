@@ -6,6 +6,7 @@ editor: visual
 
 ```{r}
 library(tidyverse)
+library(naniar)
 library(readxl)
 ```
 
@@ -15,7 +16,48 @@ suppressWarnings(nyfed <- read_excel("../data/raw/FRBNY-SCE-Public-Microdata-Com
 
 ```{r}
 nyfed$date <- as.Date(paste0(nyfed$date, "01"), format = "%Y%m%d")
-hist(nyfed$date)
-
 nyfed %>% count(date, `_STATE`)
 ```
+
+```{r}
+# Dropped all NAs, need to come back to this
+mrp <- nyfed %>%
+  select(Q2, weight, `_HH_INC_CAT`, `_EDU_CAT`, `_COMMUTING_ZONE`, `_REGION_CAT`, `_NUM_CAT`, `_AGE_CAT`, `_STATE`) %>%
+  drop_na() %>%
+  mutate(across(c(`_HH_INC_CAT`, `_EDU_CAT`, `_AGE_CAT`, `_STATE`), as.factor)) %>%
+  mutate(q2 =if_else(Q2 >= 4, 1, 0),
+        inc_idx   = as.integer(`_HH_INC_CAT`),
+        edu_idx   = as.integer(`_EDU_CAT`),
+        age_idx   = as.integer(`_AGE_CAT`),
+        state_idx = as.integer(`_STATE`)) %>%
+  select(-Q2) %>%
+  relocate(q2)
+
+# Seeing total number of categories by column
+mrp %>%
+  summarise(
+    across(everything(), list(
+      n_categories = ~ n_distinct(.x, na.rm = TRUE),
+      n_na = ~ sum(is.na(.x))
+    ), .names = "{.col}__{.fn}")
+  ) %>%
+  pivot_longer(everything(), names_to = c("column", ".value"), names_sep = "__")
+```
+
+```{r}
+ps <- mrp %>%
+  mutate(
+    across(c(`_HH_INC_CAT`, `_EDU_CAT`, `_AGE_CAT`, `_STATE`), as.factor),
+  ) %>%
+  count(`_HH_INC_CAT`, `_EDU_CAT`, `_AGE_CAT`, `_STATE`,
+        wt = weight, name = "N", .drop = FALSE)
+
+mrp_2013_2016_clean <- mrp %>%
+  select(q2, inc_idx, edu_idx, age_idx, state_idx)
+```
+
+```{r}
+write_csv(mrp_2013_2016_clean, file = "../data/clean/mrp-2013-2016-clean.csv")
+write_csv(ps, file = "../data/clean/pop-weight-2013-2026-clean.csv")
+```
+

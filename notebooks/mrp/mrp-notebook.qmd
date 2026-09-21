@@ -1,0 +1,48 @@
+---
+title: "mrp-notebook"
+format: html
+editor: visual
+---
+
+## Quarto
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(lubridate)
+
+library(cmdstanr)
+library(posterior)
+library(bayesplot)
+```
+
+```{r}
+mrp <- read_csv("../../data/clean/mrp-2013-2016-clean.csv")
+pop_weight <- read_csv("../../data/clean/pop-weight-2013-2026-clean.csv")
+```
+
+```{r}
+stan_data <- list(
+  N = length(mrp$q2),
+  income = mrp$inc_idx,
+  education = mrp$edu_idx,
+  age = mrp$age_idx,
+  state = mrp$state_idx,
+  y = mrp$q2,
+  p = pop_weight$N
+)
+
+
+mod <- cmdstan_model(
+  "models/ar.stan",
+  stanc_options = list("O1", "warn-pedantic" = TRUE)
+)
+
+fit <- mod$sample(
+  data = stan_data,
+  refresh = 0,
+  show_messages = FALSE,
+  show_exceptions = FALSE
+)
+```
+
