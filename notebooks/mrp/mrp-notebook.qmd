@@ -19,6 +19,9 @@ library(bayesplot)
 ```{r}
 mrp <- read_csv("../../data/clean/mrp-2013-2016-clean.csv")
 pop_weight <- read_csv("../../data/clean/pop-weight-2013-2026-clean.csv")
+
+stopifnot(nrow(pop_weight) == 3 * 3 * 3 * 51)
+P_arr <- aperm(array(pop_weight$N, dim = c(51, 3, 3, 3)), c(4, 3, 2, 1))
 ```
 
 ```{r}
@@ -29,12 +32,12 @@ stan_data <- list(
   age = mrp$age_idx,
   state = mrp$state_idx,
   y = mrp$q2,
-  p = pop_weight$N
+  P = pop_weight$N
 )
 
 
 mod <- cmdstan_model(
-  "models/ar.stan",
+  "models/mrp.stan",
   stanc_options = list("O1", "warn-pedantic" = TRUE)
 )
 

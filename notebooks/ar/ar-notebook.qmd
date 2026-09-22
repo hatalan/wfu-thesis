@@ -238,8 +238,6 @@ fit$save_output_files(dir = "fits", basename = "arr2",
 ```
 
 ```{r}
-library(bayesplot)
-
 ysim <- fit$draws("Y_sim", format = "draws_matrix")   # draws × T
 lags <- 1:16
 
