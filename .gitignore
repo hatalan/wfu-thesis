@@ -38,7 +38,7 @@ data/clean/*
 *.csv.gz
 
 # Model output
-results/*
+**/results/*
 !results/.gitkeep
 
 # ---- SLURM logs ----
