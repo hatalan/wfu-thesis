@@ -63,7 +63,7 @@ results <- map_dfr(p_grid, function(p) {
 
     stan_data <- c(
       list(T = length(Y), Y = Y, p = p,
-           sigma_sd = sd(Y), prior_only = 1L),
+           sigma_sd = 1, prior_only = 1L),
       cfg$data(p)
     )
 
@@ -83,15 +83,21 @@ results <- map_dfr(p_grid, function(p) {
       as_tibble() %>%
       select(R2_sim, R2_data)
     
+    r2_from_phi <- function(phi) {
+      if (any(Mod(polyroot(c(1, -phi))) <= 1)) return(NA_real_)
+      sum(phi * ARMAacf(ar = phi, lag.max = length(phi))[-1])
+    }
     stat <- apply(phi_draws, 1, is_stationary)
 
     diag <- fit$diagnostic_summary(quiet = TRUE)
-
+    r2_exact <- apply(phi_draws, 1, r2_from_phi)
+    
     draws_list[[paste(cfg$label, p)]] <<- tibble(
       config = cfg$label, p = p,
       draw = seq_along(stat), stationary = stat,
       R2_sim = gq$R2_sim,
       R2_data = gq$R2_data,
+      r2_exact = r2_exact,
       max_mod = apply(phi_draws, 1, function(ph)
         if (any(!is.finite(ph))) NA_real_ else max(Mod(polyroot(c(1, -ph)))))
       
@@ -110,6 +116,9 @@ results <- map_dfr(p_grid, function(p) {
       R2_sim_med  = median(gq$R2_sim[stat], na.rm = TRUE),
       R2_sim_q05  = quantile(gq$R2_sim[stat], 0.05, na.rm = TRUE),
       R2_sim_q95  = quantile(gq$R2_sim[stat], 0.95, na.rm = TRUE),
+      R2_exact_med = median(r2_exact, na.rm = TRUE),
+      R2_exact_q05 = quantile(r2_exact, 0.05, na.rm = TRUE),
+      R2_exact_q95 = quantile(r2_exact, 0.95, na.rm = TRUE),
       mcse        = sqrt(p_stat * (1 - p_stat) / n_ok),
       divergences = sum(diag$num_divergent),
       max_rhat    = max(fit$summary("phi")$rhat, na.rm = TRUE)
@@ -140,6 +149,8 @@ p_plot <- results %>%
 ggsave("figures/prior_stationarity.png", p_plot, width = 8, height = 4.5, dpi = 150)
 
 p_plot
+
+print(results)
 ```
 
 ```{r}
@@ -148,4 +159,3 @@ hist <- all_draws %>%
 
 summary(hist$R2_sim)
 ```
-
