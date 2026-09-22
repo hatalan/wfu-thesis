@@ -45,4 +45,3 @@ fit <- mod$sample(
   show_exceptions = FALSE
 )
 ```
-
