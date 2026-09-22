@@ -60,13 +60,13 @@ draws_list <- list()
 
 results <- map_dfr(p_grid, function(p) {
   map_dfr(configs, function(cfg) {
-
+ 
     stan_data <- c(
       list(T = length(Y), Y = Y, p = p,
-           sigma_sd = 1, prior_only = 1L),
+           sigma_sd = var(Y), prior_only = 1L),
       cfg$data(p)
     )
-
+ 
     fit <- cfg$model$sample(
       data            = stan_data,
       chains          = 4,
@@ -76,50 +76,41 @@ results <- map_dfr(p_grid, function(p) {
       show_messages   = FALSE,
       show_exceptions = FALSE
     )
-
+ 
     phi_draws <- fit$draws("phi", format = "draws_matrix")
-    
-    gq <- fit$draws(c("R2_sim", "R2_data"), format = "draws_df") %>%
-      as_tibble() %>%
-      select(R2_sim, R2_data)
-    
-    r2_from_phi <- function(phi) {
-      if (any(Mod(polyroot(c(1, -phi))) <= 1)) return(NA_real_)
-      sum(phi * ARMAacf(ar = phi, lag.max = length(phi))[-1])
-    }
-    stat <- apply(phi_draws, 1, is_stationary)
-
-    diag <- fit$diagnostic_summary(quiet = TRUE)
+ 
+    # Exact R^2 on stationary draws; non-stationary draws censored at 1
+    # (gamma_0 -> infinity at the boundary, so R^2 -> 1).
     r2_exact <- apply(phi_draws, 1, r2_from_phi)
-    
+    stat     <- !is.na(r2_exact)
+    r2_cens  <- ifelse(stat, r2_exact, 1)
+ 
+    # ARR2's R2 parameter (the knob); absent in the naive model.
+    r2_knob <- if ("R2" %in% fit$metadata()$stan_variables) {
+      as.numeric(fit$draws("R2", format = "draws_matrix"))
+    } else {
+      rep(NA_real_, length(stat))
+    }
+ 
+    diag <- fit$diagnostic_summary(quiet = TRUE)
+ 
     draws_list[[paste(cfg$label, p)]] <<- tibble(
-      config = cfg$label, p = p,
-      draw = seq_along(stat), stationary = stat,
-      R2_sim = gq$R2_sim,
-      R2_data = gq$R2_data,
-      r2_exact = r2_exact,
-      max_mod = apply(phi_draws, 1, function(ph)
-        if (any(!is.finite(ph))) NA_real_ else max(Mod(polyroot(c(1, -ph)))))
-      
+      config = cfg$label, p = p, draw = seq_along(stat),
+      stationary = stat, r2_exact = r2_exact,
+      r2_cens = r2_cens, r2_knob = r2_knob
     )
-
-    n_ok <- sum(!is.na(stat))
-    p_stat <- mean(stat, na.rm = TRUE)
-
+ 
     tibble(
       config      = cfg$label,
       p           = p,
       n_draws     = length(stat),
-      n_finite    = n_ok,
-      prop_stat   = p_stat,
-      n_R2_sim    = sum(stat & is.finite(gq$R2_sim), na.rm = TRUE),
-      R2_sim_med  = median(gq$R2_sim[stat], na.rm = TRUE),
-      R2_sim_q05  = quantile(gq$R2_sim[stat], 0.05, na.rm = TRUE),
-      R2_sim_q95  = quantile(gq$R2_sim[stat], 0.95, na.rm = TRUE),
-      R2_exact_med = median(r2_exact, na.rm = TRUE),
-      R2_exact_q05 = quantile(r2_exact, 0.05, na.rm = TRUE),
-      R2_exact_q95 = quantile(r2_exact, 0.95, na.rm = TRUE),
-      mcse        = sqrt(p_stat * (1 - p_stat) / n_ok),
+      prop_stat   = mean(stat),
+      mcse        = sqrt(prop_stat * (1 - prop_stat) / n_draws),
+      r2_med      = median(r2_cens),
+      r2_q05      = unname(quantile(r2_cens, 0.05)),
+      r2_q95      = unname(quantile(r2_cens, 0.95)),
+      r2_stat_med = if (any(stat)) median(r2_exact[stat]) else NA_real_,
+      knob_med    = median(r2_knob, na.rm = TRUE),
       divergences = sum(diag$num_divergent),
       max_rhat    = max(fit$summary("phi")$rhat, na.rm = TRUE)
     )
