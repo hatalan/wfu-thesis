@@ -1,0 +1,213 @@
+---
+title: "var-2-notebook"
+format: html
+editor: visual
+---
+
+## Loading packages
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+
+library(cmdstanr)
+library(posterior)
+library(bayesplot)
+
+# MASS::mvrnorm() is called qualified: attaching MASS would mask dplyr::select().
+```
+
+```{r}
+# On the DEAC cluster, point cmdstanr at the shared install:
+# set_cmdstan_path("/deac/sta/classes/sta720/software/cmdstan/2.37.0")
+```
+
+### Helpers for reading matrix-valued parameters
+
+`fit$summary()` returns one row per scalar element (`A_1[1,2]`, `A[2,1,2]`, ...).
+These pull the posterior means back into the matrix shape of the simulation
+parameters, indexing explicitly so the result does not depend on the order
+cmdstan writes the elements in.
+
+```{r}
+post_matrix <- function(fit, name, K) {
+  s   <- fit$summary(name)
+  idx <- str_match(s$variable, "\\[(\\d+),(\\d+)\\]")
+  out <- matrix(NA_real_, nrow = K, ncol = K)
+  out[cbind(as.integer(idx[, 2]), as.integer(idx[, 3]))] <- s$mean
+  out
+}
+
+post_array <- function(fit, name, P, K) {
+  s   <- fit$summary(name)
+  idx <- str_match(s$variable, "\\[(\\d+),(\\d+),(\\d+)\\]")
+  out <- array(NA_real_, dim = c(P, K, K))
+  out[cbind(as.integer(idx[, 2]), as.integer(idx[, 3]), as.integer(idx[, 4]))] <- s$mean
+  out
+}
+```
+
+### Simulating VAR(2) data
+
+```{r}
+sim_var_model <- function(c_vec, A_1, A_2, Sigma, T_obs, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+  stopifnot(T_obs >= 3)
+
+  K <- length(c_vec)
+  Y <- matrix(0, nrow = T_obs, ncol = K)
+
+  epsilon <- MASS::mvrnorm(n = T_obs, mu = rep(0, K), Sigma = Sigma)
+
+  # Unconditional mean of the stable VAR(2)
+  mu <- solve(diag(K) - A_1 - A_2, c_vec)
+  Y[1, ] <- MASS::mvrnorm(1, mu, Sigma)
+  Y[2, ] <- MASS::mvrnorm(1, mu, Sigma)
+
+  for (t in 3:T_obs) {
+    Y[t, ] <- c_vec + A_1 %*% Y[t - 1, ] + A_2 %*% Y[t - 2, ] + epsilon[t, ]
+  }
+  Y
+}
+```
+
+Checking that the VAR(2) selected is stable, by confirming that every
+eigenvalue of the companion matrix lies inside the unit circle.
+
+```{r}
+T_obs <- 200
+c_vec <- c(2.5, 1.5)
+A_1 <- matrix(c(0.45, -0.15,
+                -0.35, 0.30), nrow = 2)
+A_2 <- matrix(c(0.05, -0.05,
+                -0.05, 0.03), nrow = 2)
+Sigma <- matrix(c(1.0, 0.1,
+                  0.1, 1.0), nrow = 2)
+
+K <- length(c_vec)
+
+companion <- rbind(
+  cbind(A_1, A_2),
+  cbind(diag(K), matrix(0, nrow = K, ncol = K))
+)
+Mod(eigen(companion)$values)
+```
+
+Simulating, plotting, and saving the synthetic series. The CSV is written
+without a header to match how `var-2-conjugate-litterman.qmd` reads it.
+
+```{r}
+Y <- sim_var_model(c_vec, A_1, A_2, Sigma, T_obs, seed = 1)
+
+dir.create("simdata", showWarnings = FALSE)
+write.table(Y, "simdata/Y_sim.csv", sep = ",",
+            row.names = FALSE, col.names = FALSE)
+
+sim_long <- as.data.frame(Y) %>%
+  setNames(c("y1", "y2")) %>%
+  mutate(t = row_number()) %>%
+  pivot_longer(c(y1, y2), names_to = "series", values_to = "value")
+
+ggplot(sim_long, aes(t, value, color = series)) +
+  geom_line() +
+  labs(x = "t", y = NULL, color = NULL,
+       title = "Simulated VAR(2) series") +
+  theme_minimal()
+```
+
+### Fitting the VAR(2) model to simulated data
+
+```{r}
+stan_data <- list(
+  T = T_obs,
+  K = K,
+  Y = Y
+)
+
+mod <- cmdstan_model(
+  "models/var-2.stan",
+  stanc_options = list("O1", "warn-pedantic" = TRUE)
+)
+
+fit <- mod$sample(
+  data = stan_data,
+  refresh = 0,
+  show_messages = FALSE,
+  show_exceptions = FALSE
+)
+```
+
+### Posterior analysis of model
+
+```{r}
+fit$diagnostic_summary()
+fit$summary(c("c", "A_1", "A_2", "sigma"))
+```
+
+```{r}
+cat("True c:\n");        print(c_vec)
+cat("Estimated c:\n");   print(fit$summary("c")$mean)
+
+cat("True A_1:\n");      print(A_1)
+cat("Estimated A_1:\n"); print(post_matrix(fit, "A_1", K))
+
+cat("True A_2:\n");      print(A_2)
+cat("Estimated A_2:\n"); print(post_matrix(fit, "A_2", K))
+```
+
+```{r}
+dir.create("fits", showWarnings = FALSE)
+fit$save_output_files(dir = "fits", basename = "var2",
+                      timestamp = FALSE, random = FALSE)
+```
+
+### Fitting the hierarchical Minnesota model to simulated data
+
+```{r}
+P <- 2
+
+stan_data_hier <- list(
+  T = T_obs,
+  K = K,
+  P = P,
+  Y = Y
+)
+
+mod_hier <- cmdstan_model(
+  "models/var-2-hierarchical.stan",
+  stanc_options = list("O1", "warn-pedantic" = TRUE)
+)
+
+fit_hier <- mod_hier$sample(
+  data = stan_data_hier,
+  refresh = 0,
+  show_messages = FALSE,
+  show_exceptions = FALSE
+)
+```
+
+### Posterior analysis of model
+
+```{r}
+fit_hier$diagnostic_summary()
+fit_hier$summary(c("c", "A", "sigma", "lambda", "theta"))
+```
+
+```{r}
+A_hat <- post_array(fit_hier, "A", P, K)
+
+cat("True c:\n");        print(c_vec)
+cat("Estimated c:\n");   print(fit_hier$summary("c")$mean)
+
+cat("True A_1:\n");      print(A_1)
+cat("Estimated A_1:\n"); print(A_hat[1, , ])
+
+cat("True A_2:\n");      print(A_2)
+cat("Estimated A_2:\n"); print(A_hat[2, , ])
+```
+
+```{r}
+dir.create("fits", showWarnings = FALSE)
+fit_hier$save_output_files(dir = "fits", basename = "var2-hierarchical",
+                           timestamp = FALSE, random = FALSE)
+```
