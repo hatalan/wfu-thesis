@@ -24,10 +24,7 @@ library(bayesplot)
 
 ### Helpers for reading matrix-valued parameters
 
-`fit$summary()` returns one row per scalar element (`A_1[1,2]`, `A[2,1,2]`, ...).
-These pull the posterior means back into the matrix shape of the simulation
-parameters, indexing explicitly so the result does not depend on the order
-cmdstan writes the elements in.
+`fit$summary()` returns one row per scalar element (`A_1[1,2]`, `A[2,1,2]`, ...). These pull the posterior means back into the matrix shape of the simulation parameters, indexing explicitly so the result does not depend on the order cmdstan writes the elements in.
 
 ```{r}
 post_matrix <- function(fit, name, K) {
@@ -71,8 +68,7 @@ sim_var_model <- function(c_vec, A_1, A_2, Sigma, T_obs, seed = NULL) {
 }
 ```
 
-Checking that the VAR(2) selected is stable, by confirming that every
-eigenvalue of the companion matrix lies inside the unit circle.
+Checking that the VAR(2) selected is stable, by confirming that every eigenvalue of the companion matrix lies inside the unit circle.
 
 ```{r}
 T_obs <- 200
@@ -93,8 +89,7 @@ companion <- rbind(
 Mod(eigen(companion)$values)
 ```
 
-Simulating, plotting, and saving the synthetic series. The CSV is written
-without a header to match how `var-2-conjugate-litterman.qmd` reads it.
+Simulating, plotting, and saving the synthetic series. The CSV is written without a header to match how `var-2-conjugate-litterman.qmd` reads it.
 
 ```{r}
 Y <- sim_var_model(c_vec, A_1, A_2, Sigma, T_obs, seed = 1)

@@ -36,6 +36,10 @@ ar3_data <- arima.sim(model = list(ar = phi), n = 200, sd = 10)
 ```
 
 ```{r}
+dir.create("simdata", showWarnings = FALSE)
+write.table(ar3_data, "simdata/ar_sim.csv", sep = ",",
+            row.names = FALSE, col.names = FALSE)
+
 plot(ar3_data)
 ```
 
