@@ -4,16 +4,22 @@ format: html
 editor: visual
 ---
 
+## Loading packages
+
 ```{r}
 library(ggplot2)
 library(tidyverse)
 library(jsonlite)
 ```
 
+### Loading simulated data
+
 We're going to run some Bayesian VAR(2) models in R (conjugate priors and Minnesota with fixed innovation matrix).
 
+`simdata/Y_sim.csv` is written by `var-2-notebook.qmd`; run that notebook first.
+
 ```{r}
-Y <- as.matrix(read.csv("notebooks/simdata/Y_sim.csv", header = FALSE, col.names = c("y1", "y2")))
+Y <- as.matrix(read.csv("simdata/Y_sim.csv", header = FALSE, col.names = c("y1", "y2")))
 
 T <- nrow(Y) # Number of time periods
 K <- ncol(Y) # Number of variables
@@ -25,6 +31,8 @@ X <- cbind(1,
            Y[1:(T-2), ])                 
                                       
 ```
+
+### Conjugate Minnesota posterior for fixed hyperparameters
 
 This block sets the "known" sigma's from the data by taking the standard deviation of the residuals for each of the 2 univariate AR processes:
 
@@ -78,6 +86,8 @@ for (j in 1:K) {
 print(B_post)
 ```
 
+### Wrapping the posterior in a function
+
 ```{r}
 conj_litter <- function(Y, P, lambda, theta, alpha = 1) {
   
@@ -85,6 +95,8 @@ conj_litter <- function(Y, P, lambda, theta, alpha = 1) {
   K <- ncol(Y) # Number of variables
   P <- P # Number of lags
 
+  # NOTE: X is written out for two lags only, so this is P = 2 despite the
+  # argument; generalizing it means building the lag block in a loop over P.
   Y_eff <- Y[(P+1):T, ]                    
   X <- cbind(1,
             Y[P:(T-1), ],                 
@@ -140,8 +152,9 @@ conj_litter <- function(Y, P, lambda, theta, alpha = 1) {
 
 ```
 
-```{r}
+### Sweeping over the tightness hyperparameter
 
+```{r}
 lambda_check <- c(0.1, 0.2, 0.3, 0.4, 0.5)
 B_post_list <- vector(mode = "list", length = length(lambda_check))
 
@@ -154,7 +167,11 @@ for (i in 1:length(lambda_check)) {
 B_post_list[1]
 ```
 
+### Posterior coefficients vs. tightness
+
 ```{r}
+dir.create("figures", showWarnings = FALSE)
+
 coef_names <- c("const", "y1.l1", "y2.l1", "y1.l2", "y2.l2")
 eq_names   <- c("y1", "y2")
 
@@ -178,8 +195,14 @@ p_conj <- coef_df %>%
   coord_cartesian(xlim = c(0, 0.85), ylim = c(-0.5, 1.1)) +
   theme_minimal()
 
+p_conj
 ggsave("figures/coef_conjugate.png", p_conj, width = 9, height = 4, dpi = 150)
 ```
+
+### Comparing against the hierarchical Stan sweep
+
+`results/lambda_rate` holds one subdirectory per swept gamma-prior rate, each
+with `metadata.json` and `summary.csv` from the cluster run.
 
 ```{r}
 sweep_dir <- "results/lambda_rate"
