@@ -36,7 +36,7 @@ data/clean/*
 
 # ---- Posterior fits / sampler output ----
 # cmdstanr writes one CSV per chain, plus console logs
-**/fits/*
+**/**/notebooks/ar/fits/*
 !**/fits/.gitkeep
 notebooks/simdata/*
 !notebooks/simdata/.gitkeep
