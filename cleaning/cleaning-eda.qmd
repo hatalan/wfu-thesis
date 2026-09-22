@@ -60,4 +60,3 @@ mrp_2013_2016_clean <- mrp %>%
 write_csv(mrp_2013_2016_clean, file = "../data/clean/mrp-2013-2016-clean.csv")
 write_csv(ps, file = "../data/clean/pop-weight-2013-2026-clean.csv")
 ```
-

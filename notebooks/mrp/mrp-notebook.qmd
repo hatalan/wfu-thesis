@@ -20,21 +20,23 @@ library(bayesplot)
 mrp <- read_csv("../../data/clean/mrp-2013-2016-clean.csv")
 pop_weight <- read_csv("../../data/clean/pop-weight-2013-2026-clean.csv")
 
+set.seed(1)
+mrp_sub <- mrp %>% slice_sample(n = 5000)
+
 stopifnot(nrow(pop_weight) == 3 * 3 * 3 * 51)
 P_arr <- aperm(array(pop_weight$N, dim = c(51, 3, 3, 3)), c(4, 3, 2, 1))
 ```
 
 ```{r}
 stan_data <- list(
-  N = length(mrp$q2),
-  income = mrp$inc_idx,
-  education = mrp$edu_idx,
-  age = mrp$age_idx,
-  state = mrp$state_idx,
-  y = mrp$q2,
-  P = pop_weight$N
+  N = length(mrp_sub$q2),
+  income = mrp_sub$inc_idx,
+  education = mrp_sub$edu_idx,
+  age = mrp_sub$age_idx,
+  state = mrp_sub$state_idx,
+  y = mrp_sub$q2,
+  P = P_arr
 )
-
 
 mod <- cmdstan_model(
   "models/mrp.stan",
@@ -43,8 +45,82 @@ mod <- cmdstan_model(
 
 fit <- mod$sample(
   data = stan_data,
-  refresh = 0,
-  show_messages = FALSE,
-  show_exceptions = FALSE
+  refresh = 100,
+  show_messages = TRUE,
+  show_exceptions = TRUE,
+  parallel_chains = 4
 )
 ```
+```{r}
+dir.create("fits", showWarnings = FALSE)
+fit$save_output_files(dir = "fits", basename = "mrp_subset",
+                      timestamp = FALSE, random = FALSE)
+```
+```{r}
+fit$diagnostic_summary()
+fit$summary(c("alpha", "sigma_beta_4", "phi"))
+```
+
+```{r}
+state_labels <- sort(unique(pop_weight$`_STATE`))
+
+phi_state_df <- fit$draws("phi_state", format = "draws_df") %>%
+  as_tibble() %>%
+  select(starts_with("phi_state")) %>%
+  pivot_longer(everything(), names_to = "param", values_to = "value") %>%
+  mutate(state_idx = as.integer(str_extract(param, "\\d+"))) %>%
+  filter(is.finite(value)) %>% # drops states with no poststrat cells
+  group_by(state_idx) %>%
+  summarise(
+    median = median(value),
+    q05 = quantile(value, 0.05), q95 = quantile(value, 0.95),
+    q25 = quantile(value, 0.25), q75 = quantile(value, 0.75),
+    .groups = "drop"
+  ) %>%
+  mutate(state = state_labels[state_idx],
+         state = fct_reorder(state, median))
+
+ggplot(phi_state_df, aes(x = median, y = state)) +
+  geom_linerange(aes(xmin = q05, xmax = q95), linewidth = 0.4) +
+  geom_linerange(aes(xmin = q25, xmax = q75), linewidth = 1.2) +
+  geom_point(size = 1.5) +
+  labs(x = expression(phi[state]), y = NULL,
+       title = "Posterior share optimistic by state",
+       subtitle = "Median, 50% and 90% intervals") +
+  theme_minimal()
+```
+```{r}
+fit$summary("beta_4") %>%
+  mutate(state_idx = row_number()) %>%
+  left_join(count(mrp_sub, state_idx), by = "state_idx") %>%
+  ggplot(aes(n, sd)) +
+  geom_text(aes(label = state_idx)) +
+  scale_x_log10() +
+  theme_minimal()
+
+state_names <- pop_weight %>%
+  distinct(`_STATE`) %>%
+  arrange(`_STATE`) %>%
+  pull(`_STATE`)
+
+mrp_sub %>% 
+  count(state_idx) %>% 
+  arrange(n) %>% head(10) %>% 
+  mutate(state = state_names[state_idx]) %>% 
+  relocate(state)
+```
+
+```{r}
+state_names <- pop_weight %>%
+  distinct(`_STATE`) %>%
+  arrange(`_STATE`) %>%
+  pull(`_STATE`)
+
+fit$summary("phi_state") %>%
+  mutate(state_idx = as.integer(str_extract(variable, "\\d+")),
+         state = state_names[state_idx]) %>%
+  arrange(desc(sd)) %>%
+  select(state_idx, state, median, sd, q5, q95) %>%
+  print(n = 12)
+```
+
