@@ -51,11 +51,13 @@ fit <- mod$sample(
   parallel_chains = 4
 )
 ```
+
 ```{r}
 dir.create("fits", showWarnings = FALSE)
 fit$save_output_files(dir = "fits", basename = "mrp_subset",
                       timestamp = FALSE, random = FALSE)
 ```
+
 ```{r}
 fit$diagnostic_summary()
 fit$summary(c("alpha", "sigma_beta_4", "phi"))
@@ -89,6 +91,7 @@ ggplot(phi_state_df, aes(x = median, y = state)) +
        subtitle = "Median, 50% and 90% intervals") +
   theme_minimal()
 ```
+
 ```{r}
 fit$summary("beta_4") %>%
   mutate(state_idx = row_number()) %>%
@@ -123,4 +126,3 @@ fit$summary("phi_state") %>%
   select(state_idx, state, median, sd, q5, q95) %>%
   print(n = 12)
 ```
-

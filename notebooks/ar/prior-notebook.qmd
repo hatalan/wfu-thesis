@@ -21,46 +21,46 @@ umich <- read.csv("../../data/raw/sca-table1-on-2026-Aug-30.csv")
 Y <- as.numeric(scale(umich$Index))
 
 ## Compile models
-
 mod_ar   <- cmdstan_model("models/ar.stan",
                           stanc_options = list("O1", "warn-pedantic" = TRUE))
 mod_arr2 <- cmdstan_model("models/arr2.stan",
                           stanc_options = list("O1", "warn-pedantic" = TRUE))
 
-# Exact population R^2 = sum(phi * rho); NA outside the stationary region.
 r2_from_phi <- function(phi) {
   if (any(!is.finite(phi))) return(NA_real_)
   if (any(Mod(polyroot(c(1, -phi))) <= 1)) return(NA_real_)
   sum(phi * ARMAacf(ar = phi, lag.max = length(phi))[-1])
 }
  
-# NOTE: last element is always 0.1, which pushes psi to the simplex edge and
-# causes divergences. Revisit before relying on the Minnesota rows.
 minnesota_cons <- function(p) (p^2 / 10) * (1 / (1:p)^2)
 
 ## Configurations
-
 p_grid  <- c(1, 2, 3, 4, 6, 8, 12, 16, 24)
-mean_R2 <- 1/3
-prec_R2 <- 3
-knob_q  <- qbeta(c(0.05, 0.5, 0.95),
-                 mean_R2 * prec_R2, (1 - mean_R2) * prec_R2)
+mean_R2_1 <- 1/3
+prec_R2_1 <- 3
+mean_R2_2 <- 2/3
+prec_R2_2 <- 9
 
 configs <- list(
   list(label = "naive (sd = 1)", model = mod_ar,
        data = function(p) list(phi_sd = 1.0)),
   list(label = "naive (sd = 0.5)", model = mod_ar,
        data = function(p) list(phi_sd = 0.5)),
-  list(label = "ARR2 flat", model = mod_arr2,
+  list(label = "ARR2 flat (R2 mean = 1/3)", model = mod_arr2,
        data = function(p) list(cons = rep(1, p),
-                               mean_R2 = mean_R2, prec_R2 = prec_R2)),
-  list(label = "ARR2 Minn.", model = mod_arr2,
+                               mean_R2 = mean_R2_1, prec_R2 = prec_R2_1)),
+    list(label = "ARR2 flat (R2 mean = 2/3)", model = mod_arr2,
+       data = function(p) list(cons = rep(1, p),
+                               mean_R2 = mean_R2_2, prec_R2 = prec_R2_2)),
+  list(label = "ARR2 Minn. (R2 mean = 1/3)", model = mod_arr2,
        data = function(p) list(cons = minnesota_cons(p),
-                               mean_R2 = mean_R2, prec_R2 = prec_R2))
+                               mean_R2 = mean_R2_1, prec_R2 = prec_R2_1)),
+  list(label = "ARR2 Minn. (R2 mean = 2/3)", model = mod_arr2,
+       data = function(p) list(cons = minnesota_cons(p),
+                               mean_R2 = mean_R2_2, prec_R2 = prec_R2_2))
 )
 
 ## Running sweep
-
 dir.create("results", showWarnings = FALSE)
 dir.create("figures", showWarnings = FALSE)
  
@@ -87,13 +87,10 @@ results <- map_dfr(p_grid, function(p) {
  
     phi_draws <- fit$draws("phi", format = "draws_matrix")
  
-    # Exact R^2 on stationary draws; non-stationary draws censored at 1
-    # (gamma_0 -> infinity at the boundary, so R^2 -> 1).
     r2_exact <- apply(phi_draws, 1, r2_from_phi)
     stat     <- !is.na(r2_exact)
     r2_cens  <- ifelse(stat, r2_exact, 1)
  
-    # ARR2's R2 parameter (the knob); absent in the naive model.
     r2_knob <- if ("R2" %in% fit$metadata()$stan_variables) {
       as.numeric(fit$draws("R2", format = "draws_matrix"))
     } else {
@@ -114,10 +111,9 @@ results <- map_dfr(p_grid, function(p) {
       n_draws     = length(stat),
       prop_stat   = mean(stat),
       mcse        = sqrt(prop_stat * (1 - prop_stat) / n_draws),
-      r2_med      = median(r2_cens),
-      r2_q05      = unname(quantile(r2_cens, 0.05)),
-      r2_q95      = unname(quantile(r2_cens, 0.95)),
       r2_stat_med = if (any(stat)) median(r2_exact[stat]) else NA_real_,
+      r2_q05      = if (any(stat)) unname(quantile(r2_exact[stat], 0.05)),
+      r2_q95      = if (any(stat)) unname(quantile(r2_exact[stat], 0.95)),
       knob_med    = median(r2_knob, na.rm = TRUE),
       divergences = sum(diag$num_divergent),
       max_rhat    = max(fit$summary("phi")$rhat, na.rm = TRUE)
@@ -135,8 +131,7 @@ write_csv(all_draws, "results/prior_r2_draws.csv")
 
 ```{r}
 p_r2 <- results %>%
-  ggplot(aes(p, r2_med, colour = config, fill = config)) +
-  geom_hline(yintercept = knob_q, linetype = c(3, 2, 3), colour = "grey40") +
+  ggplot(aes(p, r2_stat_med, colour = config, fill = config)) +
   geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.15, colour = NA) +
   geom_line() +
   geom_point() +
@@ -164,27 +159,11 @@ p_stat <- results %>%
 ```
 
 ```{r}
-p_knob <- all_draws %>%
-  filter(!is.na(r2_knob), stationary, p %in% c(1, 3, 8, 24)) %>%
-  ggplot(aes(r2_knob, r2_exact)) +
-  geom_point(alpha = 0.1, size = 0.3) +
-  geom_abline(linetype = 2) +
-  facet_grid(config ~ p, labeller = label_both) +
-  coord_equal() +
-  labs(x = "ARR2 R2 parameter (knob)", y = "Exact implied R-squared",
-       title = "Knob vs realised R-squared (stationary draws)") +
-  theme_minimal()
-```
-
-```{r}
 p_r2
 p_stat
-p_knob
 ```
 
 ```{r}
 ggsave("figures/prior_r2_by_p.png",    p_r2,   width = 8, height = 4.5, dpi = 150)
 ggsave("figures/prior_stationarity.png", p_stat, width = 8, height = 4.5, dpi = 150)
-ggsave("figures/prior_r2_knob_vs_exact.png", p_knob, width = 9, height = 5, dpi = 150)
 ```
-
