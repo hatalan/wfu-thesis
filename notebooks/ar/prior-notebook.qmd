@@ -18,7 +18,7 @@ library(bayesplot)
 
 ```{r}
 umich <- read.csv("../../data/raw/sca-table1-on-2026-Aug-30.csv")
-Y <- umich$Index
+Y <- as.numeric(scale(umich$Index))
 
 ## Compile models
 
@@ -27,43 +27,51 @@ mod_ar   <- cmdstan_model("models/ar.stan",
 mod_arr2 <- cmdstan_model("models/arr2.stan",
                           stanc_options = list("O1", "warn-pedantic" = TRUE))
 
-## Stationarity checks
-
-is_stationary <- function(ph) {
-  if (any(!is.finite(ph))) return(NA)
-  all(Mod(polyroot(c(1, -ph))) > 1)
+# Exact population R^2 = sum(phi * rho); NA outside the stationary region.
+r2_from_phi <- function(phi) {
+  if (any(!is.finite(phi))) return(NA_real_)
+  if (any(Mod(polyroot(c(1, -phi))) <= 1)) return(NA_real_)
+  sum(phi * ARMAacf(ar = phi, lag.max = length(phi))[-1])
 }
-
+ 
+# NOTE: last element is always 0.1, which pushes psi to the simplex edge and
+# causes divergences. Revisit before relying on the Minnesota rows.
 minnesota_cons <- function(p) (p^2 / 10) * (1 / (1:p)^2)
 
 ## Configurations
 
-p_grid <- c(3, 10, 15)
+p_grid  <- c(1, 2, 3, 4, 6, 8, 12, 16, 24)
+mean_R2 <- 1/3
+prec_R2 <- 3
+knob_q  <- qbeta(c(0.05, 0.5, 0.95),
+                 mean_R2 * prec_R2, (1 - mean_R2) * prec_R2)
 
 configs <- list(
   list(label = "naive (sd = 1)", model = mod_ar,
        data = function(p) list(phi_sd = 1.0)),
   list(label = "naive (sd = 0.5)", model = mod_ar,
        data = function(p) list(phi_sd = 0.5)),
-  list(label = "ARR2 0.33 flat", model = mod_arr2,
-       data = function(p) list(cons = rep(1, p), mean_R2 = 1/3, prec_R2 = 3)),
-  list(label = "ARR2 0.33 Minn.", model = mod_arr2,
-       data = function(p) list(cons = minnesota_cons(p), mean_R2 = 1/3, prec_R2 = 3))
+  list(label = "ARR2 flat", model = mod_arr2,
+       data = function(p) list(cons = rep(1, p),
+                               mean_R2 = mean_R2, prec_R2 = prec_R2)),
+  list(label = "ARR2 Minn.", model = mod_arr2,
+       data = function(p) list(cons = minnesota_cons(p),
+                               mean_R2 = mean_R2, prec_R2 = prec_R2))
 )
 
 ## Running sweep
 
 dir.create("results", showWarnings = FALSE)
 dir.create("figures", showWarnings = FALSE)
-
+ 
 draws_list <- list()
-
+ 
 results <- map_dfr(p_grid, function(p) {
   map_dfr(configs, function(cfg) {
  
     stan_data <- c(
       list(T = length(Y), Y = Y, p = p,
-           sigma_sd = var(Y), prior_only = 1L),
+           sigma_sd = 1, prior_only = 1L),
       cfg$data(p)
     )
  
@@ -121,32 +129,62 @@ all_draws <- bind_rows(draws_list)
 
 print(results %>% mutate(across(where(is.numeric), ~ round(.x, 4))), n = Inf)
 
-write_csv(results, "results/prior_stationarity.csv")
-write_csv(all_draws, "results/prior_draws_stationary.csv")
-
-## Plot
-
-p_plot <- results %>%
-  ggplot(aes(p, prop_stat, color = config)) +
-  geom_line() +
-  geom_pointrange(aes(ymin = prop_stat - 2 * mcse,
-                      ymax = prop_stat + 2 * mcse)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_x_continuous(breaks = p_grid) +
-  labs(x = "Lag order p", y = "Proportion of prior draws stationary",
-       color = NULL, title = "Stationary prior mass by lag order") +
-  theme_minimal()
-
-ggsave("figures/prior_stationarity.png", p_plot, width = 8, height = 4.5, dpi = 150)
-
-p_plot
-
-print(results)
+write_csv(results,   "results/prior_r2_consistency.csv")
+write_csv(all_draws, "results/prior_r2_draws.csv")
 ```
 
 ```{r}
-hist <- all_draws %>%
-       filter(config == "ARR2 0.33 Minn.", p == 3, stationary == TRUE)
-
-summary(hist$R2_sim)
+p_r2 <- results %>%
+  ggplot(aes(p, r2_med, colour = config, fill = config)) +
+  geom_hline(yintercept = knob_q, linetype = c(3, 2, 3), colour = "grey40") +
+  geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.15, colour = NA) +
+  geom_line() +
+  geom_point() +
+  scale_x_log10(breaks = p_grid) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Lag order p",
+       y = expression("Prior-implied " * R^2 * " (non-stationary = 1)"),
+       colour = NULL, fill = NULL,
+       title = "Prior-implied R-squared by lag order",
+       subtitle = "Median and 90% band; grey lines = ARR2 knob Beta quantiles") +
+  theme_minimal()
 ```
+
+```{r}
+p_stat <- results %>%
+  ggplot(aes(p, prop_stat, colour = config)) +
+  geom_line() +
+  geom_pointrange(aes(ymin = prop_stat - 2 * mcse,
+                      ymax = prop_stat + 2 * mcse)) +
+  scale_x_log10(breaks = p_grid) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Lag order p", y = "Proportion of prior draws stationary",
+       colour = NULL, title = "Stationary prior mass by lag order") +
+  theme_minimal()
+```
+
+```{r}
+p_knob <- all_draws %>%
+  filter(!is.na(r2_knob), stationary, p %in% c(1, 3, 8, 24)) %>%
+  ggplot(aes(r2_knob, r2_exact)) +
+  geom_point(alpha = 0.1, size = 0.3) +
+  geom_abline(linetype = 2) +
+  facet_grid(config ~ p, labeller = label_both) +
+  coord_equal() +
+  labs(x = "ARR2 R2 parameter (knob)", y = "Exact implied R-squared",
+       title = "Knob vs realised R-squared (stationary draws)") +
+  theme_minimal()
+```
+
+```{r}
+p_r2
+p_stat
+p_knob
+```
+
+```{r}
+ggsave("figures/prior_r2_by_p.png",    p_r2,   width = 8, height = 4.5, dpi = 150)
+ggsave("figures/prior_stationarity.png", p_stat, width = 8, height = 4.5, dpi = 150)
+ggsave("figures/prior_r2_knob_vs_exact.png", p_knob, width = 9, height = 5, dpi = 150)
+```
+
