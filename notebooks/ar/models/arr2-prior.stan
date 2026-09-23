@@ -1,10 +1,9 @@
 functions {
   real arr2_ncp_lpdf(vector phi_z, vector psi, real R2, real sigma,
-		 data real sigma_sd, data real mean_R2,
+		 data real mean_R2,
 		 data real prec_R2, data vector cons, data real var_y) {
     return normal_lpdf(phi_z | 0, 1) +
       beta_lpdf(R2 | mean_R2 * prec_R2, (1 - mean_R2) * prec_R2) +
-      normal_lpdf(sigma | 0, sigma_sd) +
       dirichlet_lpdf(psi | cons);
   }
 }
@@ -50,7 +49,7 @@ transformed parameters {
 }
 model {
   // priors
-  target += arr2_ncp_lpdf(phi_z | psi, R2, sigma, sigma_sd, mean_R2, prec_R2, cons, var_y);
+  target += arr2_ncp_lpdf(phi_z | psi, R2, sigma, mean_R2, prec_R2, cons, var_y);
   target += normal_lpdf(alpha | 0, 1);
   // likelihood
   if (!prior_only)

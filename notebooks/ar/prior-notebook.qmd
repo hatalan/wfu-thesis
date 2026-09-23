@@ -17,7 +17,8 @@ library(bayesplot)
 ```
 
 ```{r}
-y <- read.csv("/simdata/ar_sim.csv")
+y <- read.csv("simdata/ar_sim.csv")
+y <- as.numeric(scale(y))
 
 ## Compile models
 mod_ar   <- cmdstan_model("models/ar.stan",
@@ -71,7 +72,7 @@ results_1 <- map_dfr(p_grid, function(p) {
   map_dfr(configs, function(cfg) {
  
     stan_data <- c(
-      list(T = length(Y), Y = Y, p = p,
+      list(T = length(y), Y = y, p = p,
            sigma_sd = 1, prior_only = 1L),
       cfg$data(p)
     )
@@ -112,7 +113,7 @@ results_1 <- map_dfr(p_grid, function(p) {
       n_draws     = length(stat),
       prop_stat   = mean(stat),
       mcse        = sqrt(prop_stat * (1 - prop_stat) / n_draws),
-      r2_med = if (any(stat)) median(r2_exact[stat]) else NA_real_,
+      r2_med      = if (any(stat)) median(r2_exact[stat]) else NA_real_,
       r2_q05      = if (any(stat)) unname(quantile(r2_exact[stat], 0.05)),
       r2_q95      = if (any(stat)) unname(quantile(r2_exact[stat], 0.95)),
       knob_med    = median(r2_knob, na.rm = TRUE),
@@ -122,7 +123,7 @@ results_1 <- map_dfr(p_grid, function(p) {
   })
 })
 
-all_draws <- bind_rows(draws_list)
+all_draws_1 <- bind_rows(draws_list)
 
 print(results_1 %>% mutate(across(where(is.numeric), ~ round(.x, 4))), n = Inf)
 
@@ -132,7 +133,7 @@ write_csv(all_draws_1, "results/prior_r2_draws_1.csv")
 
 ```{r}
 p_r2_1 <- results_1 %>%
-  ggplot(aes(p, r2_stat_med, colour = config)) +
+  ggplot(aes(p, r2_med, colour = config)) +
   geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.15, colour = NA) +
   geom_line() +
   geom_point() +
@@ -177,24 +178,7 @@ mod_ar <- cmdstan_model("models/ar.stan",
                           stanc_options = list("O1", "warn-pedantic" = TRUE))
 mod_arr2_prior <- cmdstan_model("models/arr2-prior.stan",
                           stanc_options = list("O1", "warn-pedantic" = TRUE))
-
-## Stationary check
-r2_from_phi <- function(phi) {
-  if (any(!is.finite(phi))) return(NA_real_)
-  if (any(Mod(polyroot(c(1, -phi))) <= 1)) return(NA_real_)
-  sum(phi * ARMAacf(ar = phi, lag.max = length(phi))[-1])
-}
-
-## Generate Dirichlet parameters for Minnesota variant
-minnesota_cons <- function(p) (p^2 / 10) * (1 / (1:p)^2)
-
-## Configs
-p_grid  <- c(1, 2, 3, 4, 6, 8, 12, 16, 24)
-mean_R2_1 <- 1/3
-prec_R2_1 <- 3
-mean_R2_2 <- 2/3
-prec_R2_2 <- 9
-
+ 
 configs <- list(
   list(label = "naive (sd = 1)", model = mod_ar,
        data = function(p) list(phi_sd = 1.0)),
@@ -213,15 +197,15 @@ configs <- list(
        data = function(p) list(cons = minnesota_cons(p),
                                mean_R2 = mean_R2_2, prec_R2 = prec_R2_2))
 )
- 
+
 draws_list <- list()
  
 results_2 <- map_dfr(p_grid, function(p) {
   map_dfr(configs, function(cfg) {
  
     stan_data <- c(
-      list(T = length(Y), Y = Y, 
-           p = p, prior_only = 1L),
+      list(T = length(y), Y = y, 
+           sigma_sd = 1, p = p, prior_only = 1L),
       cfg$data(p)
     )
  
@@ -236,6 +220,7 @@ results_2 <- map_dfr(p_grid, function(p) {
     )
  
     phi_draws <- fit$draws("phi", format = "draws_matrix")
+    sumsq <- rowSums(phi_draws^2)
  
     r2_exact <- apply(phi_draws, 1, r2_from_phi)
     stat     <- !is.na(r2_exact)
@@ -252,7 +237,7 @@ results_2 <- map_dfr(p_grid, function(p) {
     draws_list[[paste(cfg$label, p)]] <<- tibble(
       config = cfg$label, p = p, draw = seq_along(stat),
       stationary = stat, r2_exact = r2_exact,
-      r2_cens = r2_cens, r2_knob = r2_knob
+      r2_cens = r2_cens, sumsq = sumsq, r2_knob = r2_knob
     )
  
     tibble(
@@ -261,7 +246,7 @@ results_2 <- map_dfr(p_grid, function(p) {
       n_draws     = length(stat),
       prop_stat   = mean(stat),
       mcse        = sqrt(prop_stat * (1 - prop_stat) / n_draws),
-      r2_med = if (any(stat)) median(r2_exact[stat]) else NA_real_,
+      r2_med      = if (any(stat)) median(r2_exact[stat]) else NA_real_,
       r2_q05      = if (any(stat)) unname(quantile(r2_exact[stat], 0.05)),
       r2_q95      = if (any(stat)) unname(quantile(r2_exact[stat], 0.95)),
       knob_med    = median(r2_knob, na.rm = TRUE),
@@ -271,7 +256,7 @@ results_2 <- map_dfr(p_grid, function(p) {
   })
 })
 
-all_draws <- bind_rows(draws_list)
+all_draws_2 <- bind_rows(draws_list)
 
 print(results_2 %>% mutate(across(where(is.numeric), ~ round(.x, 4))), n = Inf)
 
@@ -281,8 +266,7 @@ write_csv(all_draws_2, "results/prior_r2_draws_2.csv")
 
 ```{r}
 p_r2_2 <- results_2 %>%
-  ggplot(aes(p, r2_stat_med, colour = config)) +
-  geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.15, colour = NA) +
+  ggplot(aes(p, r2_med, colour = config)) +
   geom_line() +
   geom_point() +
   scale_x_log10(breaks = p_grid) +
@@ -317,3 +301,18 @@ p_stat_2
 ggsave("figures/prior_r2_by_p_2.png",    p_r2_2,   width = 8, height = 4.5, dpi = 150)
 ggsave("figures/prior_stationarity_2.png", p_stat_2, width = 8, height = 4.5, dpi = 150)
 ```
+
+```{r}
+cal_pooled <- all_draws_2 %>%
+  filter(!is.na(r2_knob)) %>%
+  group_by(config, p) %>%
+  summarise(knob_mean       = mean(r2_knob),
+            avg_model_r2    = mean(sumsq) / (mean(sumsq) + mean(1 - r2_knob)),
+            prop_stat       = mean(stationary),
+            exact_stat_mean = mean(r2_exact, na.rm = TRUE),
+            exact_cens_mean = mean(r2_cens),
+            .groups = "drop")
+ 
+print(cal_pooled %>% mutate(across(where(is.numeric), ~ round(.x, 3))), n = Inf)
+```
+
