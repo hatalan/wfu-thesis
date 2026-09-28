@@ -17,7 +17,7 @@ library(bayesplot)
 ```
 
 ```{r}
-y <- read.csv("simdata/ar_sim.csv")
+y <- read.csv("simdata/ar_sim.csv", header = FALSE)
 y <- as.numeric(scale(y))
 
 ## Compile models
@@ -107,7 +107,7 @@ results_1 <- map_dfr(p_grid, function(p) {
  
     draws_list[[paste(cfg$label, p)]] <<- tibble(
       config = cfg$label, p = p, draw = seq_along(stat),
-      stationary = stat, r2_exact = r2_exact,
+      stationary = stat, sumsq = sumsq, r2_exact = r2_exact,
       r2_cens = r2_cens, r2_knob = r2_knob,
       r2_bayes = r2_bayes, var_mu = var_mu_d, sigma2 = sigma2_d
     )
@@ -249,7 +249,7 @@ results_2 <- map_dfr(p_grid, function(p) {
  
     draws_list[[paste(cfg$label, p)]] <<- tibble(
       config = cfg$label, p = p, draw = seq_along(stat),
-      stationary = stat, r2_exact = r2_exact,
+      stationary = stat, sumsq = sumsq, r2_exact = r2_exact,
       r2_cens = r2_cens, r2_knob = r2_knob,
       r2_bayes = r2_bayes, var_mu = var_mu_d, sigma2 = sigma2_d
     )
@@ -293,7 +293,7 @@ p_r2_2 <- results_2 %>%
        y = expression("Prior-implied " * R^2 * " (among stationary coefficient vector)"),
        colour = NULL, fill = NULL,
        title = "Prior-implied R-squared by lag order",
-       subtitle = "Median and 90% band") +
+       subtitle = "Median") +
   theme_minimal()
 ```
 
