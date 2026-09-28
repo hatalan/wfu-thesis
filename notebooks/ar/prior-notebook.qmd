@@ -98,13 +98,18 @@ results_1 <- map_dfr(p_grid, function(p) {
     } else {
       rep(NA_real_, length(stat))
     }
- 
+    
+    r2_bayes <- as.numeric(fit$draws("R2_data", format = "draws_matrix"))
+    var_mu_d <- as.numeric(fit$draws("var_mu",  format = "draws_matrix"))
+    sigma2_d <- as.numeric(fit$draws("sigma",   format = "draws_matrix"))^2
+  
     diag <- fit$diagnostic_summary(quiet = TRUE)
  
     draws_list[[paste(cfg$label, p)]] <<- tibble(
       config = cfg$label, p = p, draw = seq_along(stat),
       stationary = stat, r2_exact = r2_exact,
-      r2_cens = r2_cens, r2_knob = r2_knob
+      r2_cens = r2_cens, r2_knob = r2_knob,
+      r2_bayes = r2_bayes, var_mu = var_mu_d, sigma2 = sigma2_d
     )
  
     tibble(
@@ -116,6 +121,10 @@ results_1 <- map_dfr(p_grid, function(p) {
       r2_med      = if (any(stat)) median(r2_exact[stat]) else NA_real_,
       r2_q05      = if (any(stat)) unname(quantile(r2_exact[stat], 0.05)),
       r2_q95      = if (any(stat)) unname(quantile(r2_exact[stat], 0.95)),
+      bayes_med      = median(r2_bayes),
+      bayes_q05      = unname(quantile(r2_bayes, 0.05)),
+      bayes_q95      = unname(quantile(r2_bayes, 0.95)),
+      bayes_med_stat = if (any(stat)) median(r2_bayes[stat]) else NA_real_,
       knob_med    = median(r2_knob, na.rm = TRUE),
       divergences = sum(diag$num_divergent),
       max_rhat    = max(fit$summary("phi")$rhat, na.rm = TRUE)
@@ -232,12 +241,17 @@ results_2 <- map_dfr(p_grid, function(p) {
       rep(NA_real_, length(stat))
     }
  
+    r2_bayes <- as.numeric(fit$draws("R2_data", format = "draws_matrix"))
+    var_mu_d <- as.numeric(fit$draws("var_mu",  format = "draws_matrix"))
+    sigma2_d <- as.numeric(fit$draws("sigma",   format = "draws_matrix"))^2
+  
     diag <- fit$diagnostic_summary(quiet = TRUE)
  
     draws_list[[paste(cfg$label, p)]] <<- tibble(
       config = cfg$label, p = p, draw = seq_along(stat),
       stationary = stat, r2_exact = r2_exact,
-      r2_cens = r2_cens, sumsq = sumsq, r2_knob = r2_knob
+      r2_cens = r2_cens, r2_knob = r2_knob,
+      r2_bayes = r2_bayes, var_mu = var_mu_d, sigma2 = sigma2_d
     )
  
     tibble(
@@ -249,6 +263,10 @@ results_2 <- map_dfr(p_grid, function(p) {
       r2_med      = if (any(stat)) median(r2_exact[stat]) else NA_real_,
       r2_q05      = if (any(stat)) unname(quantile(r2_exact[stat], 0.05)),
       r2_q95      = if (any(stat)) unname(quantile(r2_exact[stat], 0.95)),
+      bayes_med      = median(r2_bayes),
+      bayes_q05      = unname(quantile(r2_bayes, 0.05)),
+      bayes_q95      = unname(quantile(r2_bayes, 0.95)),
+      bayes_med_stat = if (any(stat)) median(r2_bayes[stat]) else NA_real_,
       knob_med    = median(r2_knob, na.rm = TRUE),
       divergences = sum(diag$num_divergent),
       max_rhat    = max(fit$summary("phi")$rhat, na.rm = TRUE)
@@ -311,8 +329,9 @@ cal_pooled <- all_draws_2 %>%
             prop_stat       = mean(stationary),
             exact_stat_mean = mean(r2_exact, na.rm = TRUE),
             exact_cens_mean = mean(r2_cens),
+            bayes_cond_mean = mean(r2_bayes),
+            bayes_marg      = mean(var_mu) / (mean(var_mu) + mean(sigma2)),
             .groups = "drop")
  
 print(cal_pooled %>% mutate(across(where(is.numeric), ~ round(.x, 3))), n = Inf)
 ```
-
