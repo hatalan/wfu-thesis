@@ -1,0 +1,96 @@
+---
+title: "prior-simulation"
+format: html
+editor: visual
+---
+
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+# ---- Functions ----
+rdirichlet <- function(n, alpha) {
+  g <- matrix(rgamma(n * length(alpha), shape = alpha), n, byrow = TRUE)
+  g / rowSums(g)
+}
+ 
+minnesota_cons <- function(p) (p^2 / 10) / (1:p)^2
+ 
+is_stationary <- function(phi) all(Mod(polyroot(c(1, -phi))) > 1)
+ 
+# Generative (process) R2: phi' R(phi) phi = sum(phi_i * rho_i)
+r2_gen <- function(phi) sum(phi * ARMAacf(ar = phi, lag.max = length(phi))[-1])
+ 
+# One-step-ahead Bayes R2 given a lag correlation matrix C (var_y = 1)
+r2_bayes <- function(phi, sigma2, C) {
+  s <- drop(t(phi) %*% C %*% phi)
+  s / (s + sigma2)
+}
+ 
+# Observed lag autocorrelation matrix
+C_obs <- function(y, p) toeplitz(acf(y, lag.max = p - 1, plot = FALSE)$acf[1:p])
+ 
+draw_prior <- function(n, p, a, b, cons) {
+  R2    <- rbeta(n, a, b)
+  psi   <- if (p == 1) matrix(1, n, 1) else rdirichlet(n, cons)
+  z     <- matrix(rnorm(n * p), n, p)
+  u     <- sqrt(psi) * z
+  list(R2 = R2, u = u, phi = sqrt(R2) * u, sigma2 = 1 - R2)
+}
+ 
+# ---- Data ----
+ 
+y <- as.numeric(scale(read.csv("simdata/ar_sim.csv", header = FALSE)[[1]]))
+ 
+# ---- Configs ----
+ 
+n_draws <- 1e5
+p_grid  <- c(1, 2, 5)
+ 
+configs <- list(
+  list(label = "flat, R2 mean 1/3",  mean = 1/3, prec = 3, cons = function(p) rep(1, p)),
+  list(label = "Minn., R2 mean 1/3", mean = 1/3, prec = 3, cons = minnesota_cons),
+  list(label = "flat, R2 mean 2/3",  mean = 2/3, prec = 9, cons = function(p) rep(1, p)),
+  list(label = "Minn., R2 mean 2/3", mean = 2/3, prec = 9, cons = minnesota_cons)
+)
+ 
+# ---- Loop ----
+ 
+set.seed(1)
+ 
+draws <- map_dfr(p_grid, function(p) {
+  C <- C_obs(y, p)
+  map_dfr(configs, function(cfg) {
+    a <- cfg$mean * cfg$prec
+    b <- (1 - cfg$mean) * cfg$prec
+    d <- draw_prior(n_draws, p, a, b, cfg$cons(p))
+ 
+    stat  <- apply(d$phi, 1, is_stationary)
+    rgen  <- rep(NA_real_, n_draws)
+    rgen[stat] <- apply(d$phi[stat, , drop = FALSE], 1, r2_gen)
+    rbay  <- vapply(seq_len(n_draws),
+                    function(i) r2_bayes(d$phi[i, ], d$sigma2[i], C), numeric(1))
+ 
+    tibble(
+      config     = cfg$label,
+      p          = p,
+      knob       = d$R2,
+      skew_only  = d$R2 * rowSums(d$u^2),
+      stationary = stat,
+      r2_gen     = rgen,
+      r2_bayes   = rbay
+    )
+  })
+})
+ 
+# ---- Summaries ----
+ 
+summ <- draws %>%
+  group_by(config, p) %>%
+  summarise(
+    # fill in
+    .groups = "drop"
+  )
+```
