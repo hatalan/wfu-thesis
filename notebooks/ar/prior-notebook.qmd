@@ -88,6 +88,7 @@ results_1 <- map_dfr(p_grid, function(p) {
     )
  
     phi_draws <- fit$draws("phi", format = "draws_matrix")
+    sumsq <- rowSums(phi_draws^2)
  
     r2_exact <- apply(phi_draws, 1, r2_from_phi)
     stat     <- !is.na(r2_exact)
@@ -121,10 +122,9 @@ results_1 <- map_dfr(p_grid, function(p) {
       r2_med      = if (any(stat)) median(r2_exact[stat]) else NA_real_,
       r2_q05      = if (any(stat)) unname(quantile(r2_exact[stat], 0.05)),
       r2_q95      = if (any(stat)) unname(quantile(r2_exact[stat], 0.95)),
-      bayes_med      = median(r2_bayes),
-      bayes_q05      = unname(quantile(r2_bayes, 0.05)),
-      bayes_q95      = unname(quantile(r2_bayes, 0.95)),
-      bayes_med_stat = if (any(stat)) median(r2_bayes[stat]) else NA_real_,
+      bayes_med      = if (any(stat)) median(r2_bayes) else NA_real_,
+      bayes_q05      = if (any(stat)) unname(quantile(r2_bayes, 0.05)),
+      bayes_q95      = if (any(stat)) unname(quantile(r2_bayes, 0.95)),
       knob_med    = median(r2_knob, na.rm = TRUE),
       divergences = sum(diag$num_divergent),
       max_rhat    = max(fit$summary("phi")$rhat, na.rm = TRUE)
@@ -263,10 +263,9 @@ results_2 <- map_dfr(p_grid, function(p) {
       r2_med      = if (any(stat)) median(r2_exact[stat]) else NA_real_,
       r2_q05      = if (any(stat)) unname(quantile(r2_exact[stat], 0.05)),
       r2_q95      = if (any(stat)) unname(quantile(r2_exact[stat], 0.95)),
-      bayes_med      = median(r2_bayes),
-      bayes_q05      = unname(quantile(r2_bayes, 0.05)),
-      bayes_q95      = unname(quantile(r2_bayes, 0.95)),
-      bayes_med_stat = if (any(stat)) median(r2_bayes[stat]) else NA_real_,
+      bayes_med   = if (any(stat)) median(r2_bayes) else NA_real_,
+      bayes_q05   = if (any(stat)) unname(quantile(r2_bayes, 0.05)),
+      bayes_q95   = if (any(stat)) unname(quantile(r2_bayes, 0.95)),
       knob_med    = median(r2_knob, na.rm = TRUE),
       divergences = sum(diag$num_divergent),
       max_rhat    = max(fit$summary("phi")$rhat, na.rm = TRUE)
