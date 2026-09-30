@@ -19,8 +19,8 @@ r2_exact <- function(phi) sum(phi * ARMAacf(ar = phi, lag.max = length(phi))[-1]
  
 # R2_next
 r2_next <- function(phi, sigma2, S) {
-  S <- drop(t(phi) %*% C %*% phi)
-  S / (S + sigma2)
+  q <- drop(t(phi) %*% S %*% phi)
+  q / (q + sigma2)
 }
  
 # Observed lag autocorrelation matrix
@@ -45,7 +45,7 @@ y <- as.numeric(scale(read.csv("simdata/ar_sim.csv", header = FALSE)[[1]]))
 # Configs
  
 n_draws <- 10000
-p_grid  <- c(1, 2, 5)
+p_grid  <- c(1, 2, 5, 10, 15, 25)
  
 configs <- list(
   list(label = "flat, R2 mean 1/3",  mean = 1/3, prec = 3, cons = function(p) rep(1, p)),
@@ -54,7 +54,7 @@ configs <- list(
   list(label = "Minn., R2 mean 2/3", mean = 2/3, prec = 9, cons = minnesota_cons)
 )
  
-# ---- Loop ----
+# Loop
  
 set.seed(1)
  
@@ -69,7 +69,7 @@ draws <- map_dfr(p_grid, function(p) {
     rexact  <- rep(NA_real_, n_draws)
     rexact[stat] <- apply(d$phi[stat, , drop = FALSE], 1, r2_exact)
     rnext  <- vapply(seq_len(n_draws),
-                    function(i) r2_next(d$phi[i, ], d$sigma2[i], C), numeric(1))
+                    function(i) r2_next(d$phi[i, ], d$sigma2[i], S), numeric(1))
  
     tibble(
       config     = cfg$label,
@@ -82,12 +82,64 @@ draws <- map_dfr(p_grid, function(p) {
   })
 })
  
-# ---- Summaries ----
+# Summary
  
 summ <- draws %>%
   group_by(config, p) %>%
   summarise(
-    # fill in
+    n_draws        = n(),
+    prop_stat      = mean(stationary),
+    mcse_stat      = sqrt(prop_stat * (1 - prop_stat) / n_draws),
+
+    # R2 prior
+    prior_mean     = mean(r2_prior),
+    prior_med      = median(r2_prior),
+
+    # R2_exact (stationary only)
+    exact_mean     = mean(r2_exact, na.rm = TRUE),
+    exact_med      = median(r2_exact, na.rm = TRUE),
+    exact_q05      = unname(quantile(r2_exact, 0.05, na.rm = TRUE)),
+    exact_q95      = unname(quantile(r2_exact, 0.95, na.rm = TRUE)),
+
+    # R2_next (all draws)
+    next_mean      = mean(r2_next),
+    next_med       = median(r2_next),
+    next_q05       = unname(quantile(r2_next, 0.05)),
+    next_q95       = unname(quantile(r2_next, 0.95)),
+
+    # R2_next on the stationary subset
+    next_mean_stat = mean(r2_next[stationary]),
     .groups = "drop"
   )
+```
+
+```{r}
+p_means <- summ %>%
+  mutate(
+    dirichlet = str_extract(config, "^[^,]+"),
+    r2_beta   = case_when(
+      str_detect(config, "1/3") ~ "Beta(1, 2): mean 1/3",
+      str_detect(config, "2/3") ~ "Beta(6, 3): mean 2/3"
+    )
+  ) %>%
+  pivot_longer(c(prior_mean, exact_mean, next_mean, next_mean_stat),
+               names_to = "measure", values_to = "mean") %>%
+  mutate(measure = factor(
+    measure,
+    levels = c("prior_mean", "exact_mean", "next_mean", "next_mean_stat"),
+    labels = c("R2 prior", "R2 exact (stationary)",
+               "R2 next (all)", "R2 next (stationary)")
+  )) %>%
+  ggplot(aes(p, mean, colour = measure, linetype = dirichlet)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ r2_beta) +
+  scale_x_continuous(breaks = p_grid) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Lag order p", y = expression("Mean " * R^2),
+       colour = NULL, linetype = "Dirichlet",
+       title = "Prior mean R2 by version and lag order") +
+  theme_minimal()
+
+p_means
 ```
