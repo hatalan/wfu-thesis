@@ -4,49 +4,47 @@ format: html
 editor: visual
 ---
 
-
 ```{r}
 library(tidyverse)
+library(gtools)
 ```
 
 ```{r}
-# ---- Functions ----
-rdirichlet <- function(n, alpha) {
-  g <- matrix(rgamma(n * length(alpha), shape = alpha), n, byrow = TRUE)
-  g / rowSums(g)
-}
- 
 minnesota_cons <- function(p) (p^2 / 10) / (1:p)^2
  
 is_stationary <- function(phi) all(Mod(polyroot(c(1, -phi))) > 1)
  
-# Generative (process) R2: phi' R(phi) phi = sum(phi_i * rho_i)
-r2_gen <- function(phi) sum(phi * ARMAacf(ar = phi, lag.max = length(phi))[-1])
+# R2_exact
+r2_exact <- function(phi) sum(phi * ARMAacf(ar = phi, lag.max = length(phi))[-1])
  
-# One-step-ahead Bayes R2 given a lag correlation matrix C (var_y = 1)
-r2_bayes <- function(phi, sigma2, C) {
-  s <- drop(t(phi) %*% C %*% phi)
-  s / (s + sigma2)
+# R2_next
+r2_next <- function(phi, sigma2, S) {
+  S <- drop(t(phi) %*% C %*% phi)
+  S / (S + sigma2)
 }
  
 # Observed lag autocorrelation matrix
-C_obs <- function(y, p) toeplitz(acf(y, lag.max = p - 1, plot = FALSE)$acf[1:p])
- 
-draw_prior <- function(n, p, a, b, cons) {
-  R2    <- rbeta(n, a, b)
-  psi   <- if (p == 1) matrix(1, n, 1) else rdirichlet(n, cons)
-  z     <- matrix(rnorm(n * p), n, p)
-  u     <- sqrt(psi) * z
-  list(R2 = R2, u = u, phi = sqrt(R2) * u, sigma2 = 1 - R2)
+S_obs <- function(y, p) {
+  embedded_mat <- embed(y, dimension = p + 1)
+  X <- embedded_mat[, 2:(p + 1)]
+  var(X)
 }
  
-# ---- Data ----
+draw_prior <- function(n, p, a, b, cons) {
+  R2  <- rbeta(n, a, b)
+  psi <- if (p == 1) matrix(1, n, 1) else rdirichlet(n = n, alpha = cons)
+  z <- matrix(rnorm(n * p), n, p)
+  w <- sqrt(psi) * z
+  list(R2 = R2, w = w, phi = sqrt(R2) * w, sigma2 = 1 - R2)
+}
+ 
+# Loading data
  
 y <- as.numeric(scale(read.csv("simdata/ar_sim.csv", header = FALSE)[[1]]))
  
-# ---- Configs ----
+# Configs
  
-n_draws <- 1e5
+n_draws <- 10000
 p_grid  <- c(1, 2, 5)
  
 configs <- list(
@@ -61,26 +59,25 @@ configs <- list(
 set.seed(1)
  
 draws <- map_dfr(p_grid, function(p) {
-  C <- C_obs(y, p)
+  S <- S_obs(y, p)
   map_dfr(configs, function(cfg) {
     a <- cfg$mean * cfg$prec
     b <- (1 - cfg$mean) * cfg$prec
     d <- draw_prior(n_draws, p, a, b, cfg$cons(p))
  
     stat  <- apply(d$phi, 1, is_stationary)
-    rgen  <- rep(NA_real_, n_draws)
-    rgen[stat] <- apply(d$phi[stat, , drop = FALSE], 1, r2_gen)
-    rbay  <- vapply(seq_len(n_draws),
-                    function(i) r2_bayes(d$phi[i, ], d$sigma2[i], C), numeric(1))
+    rexact  <- rep(NA_real_, n_draws)
+    rexact[stat] <- apply(d$phi[stat, , drop = FALSE], 1, r2_exact)
+    rnext  <- vapply(seq_len(n_draws),
+                    function(i) r2_next(d$phi[i, ], d$sigma2[i], C), numeric(1))
  
     tibble(
       config     = cfg$label,
       p          = p,
-      knob       = d$R2,
-      skew_only  = d$R2 * rowSums(d$u^2),
+      r2_prior   = d$R2,
       stationary = stat,
-      r2_gen     = rgen,
-      r2_bayes   = rbay
+      r2_exact   = rexact,
+      r2_next    = rnext
     )
   })
 })
