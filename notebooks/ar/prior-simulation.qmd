@@ -89,7 +89,6 @@ summ <- draws %>%
   summarise(
     n_draws        = n(),
     prop_stat      = mean(stationary),
-    mcse_stat      = sqrt(prop_stat * (1 - prop_stat) / n_draws),
 
     # R2 prior
     prior_mean     = mean(r2_prior),
