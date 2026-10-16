@@ -1,0 +1,68 @@
+---
+title: "var-2-prior"
+format: html
+editor: visual
+---
+
+```{r}
+T_obs <- 200
+c_vec <- c(2.5, 1.5)
+A_1 <- matrix(c(0.45, -0.15,
+                -0.35, 0.30), nrow = 2)
+A_2 <- matrix(c(0.05, -0.05,
+                -0.05, 0.03), nrow = 2)
+A_3 <- matrix(c(0.10, 0.04,
+                -0.06, 0.08), nrow = 2)
+A_4 <- matrix(c(0.05, -0.02,
+                0.03, 0.04), nrow = 2)
+Sigma <- matrix(c(1.0, 0.1,
+                  0.1, 1.0), nrow = 2)
+
+models <- list(
+  "VAR(2)" = list(A_1, A_2),
+  "VAR(3)" = list(A_1, A_2, A_3),
+  "VAR(4)" = list(A_1, A_2, A_3, A_4)
+)
+
+K <- length(c_vec)
+
+companion <- rbind(
+  cbind(A_1, A_2),
+  cbind(diag(K), matrix(0, nrow = K, ncol = K))
+)
+Mod(eigen(companion)$values)
+```
+
+```{r}
+var_gamma0 <- function(A, Sigma) {
+  K  <- nrow(Sigma)
+  p  <- length(A)
+  Kp <- K * p
+  F  <- matrix(0, Kp, Kp)
+  F[1:K, ] <- do.call(cbind, A)
+  if (p > 1) F[(K + 1):Kp, 1:(Kp - K)] <- diag(Kp - K)
+  Q  <- matrix(0, Kp, Kp)
+  Q[1:K, 1:K] <- Sigma
+  matrix(solve(diag(Kp^2) - kronecker(F, F), as.vector(Q)), Kp, Kp)[1:K, 1:K]
+}
+
+var <- var_gamma0(list(A_1, A_2), Sigma)
+```
+
+```{r}
+var_r2 <- function(Gamma0, Sigma) {
+  R2_eq <- 1 - diag(Sigma) / diag(Gamma0)
+  list(
+    R2_eq = R2_eq,
+    R2_mean = mean(R2_eq),
+    R2_det = 1 - det(Sigma) / det(Gamma0),
+    R2_trace = 1 - sum(diag(Sigma)) / sum(diag(Gamma0))
+  )
+}
+
+Sigma <- matrix(c(1.0, 0.1,
+                  0.1, 1.0), nrow = 2)
+
+lapply(models, function(A) var_r2(var_gamma0(A, Sigma), Sigma))
+```
+
