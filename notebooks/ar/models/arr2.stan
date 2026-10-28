@@ -48,6 +48,7 @@ transformed parameters {
     }
   }
 }
+
 model {
   // priors
   target += arr2_ncp_lpdf(phi_z | psi, R2, sigma, sigma_sd, mean_R2, prec_R2, cons, var_y);
