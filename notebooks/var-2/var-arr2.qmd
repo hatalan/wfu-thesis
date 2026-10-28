@@ -1,0 +1,48 @@
+```{r}
+library(ggplot2)
+library(tidyverse)
+
+library(cmdstanr)
+library(posterior)
+library(bayesplot)
+```
+
+```{r}
+Y <- read_csv("simdata/Y_sim.csv", col_names = FALSE) |>
+  as.matrix() |>
+  scale()
+
+stan_data <- list(
+  T        = nrow(Y),
+  N        = ncol(Y),
+  Y        = Y,
+  p        = 2,
+  xi_split = c(4, 4),
+  xi_own   = rep(1, 4),
+  xi_cross = rep(1, 4),
+  mean_R2  = 0.666,
+  prec_R2  = 3,
+  sigma_sd = 2
+)
+```
+
+```{r}
+mod_arr2 <- cmdstan_model(
+  "models/var-arr2.stan",
+  stanc_options = list("O1", "warn-pedantic" = TRUE)
+)
+
+fit_arr2 <- mod_arr2$sample(
+  data = stan_data,
+  parallel_chains = 4,
+  refresh = 0,
+  show_messages = FALSE,
+  show_exceptions = FALSE
+)
+```
+
+```{r}
+fit_arr2$diagnostic_summary()
+fit_arr2$summary(c("alpha", "A", "sigma", "R2", "w"))
+```
+
