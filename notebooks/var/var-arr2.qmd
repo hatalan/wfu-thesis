@@ -8,8 +8,36 @@ library(bayesplot)
 ```
 
 ```{r}
-Y <- read_csv("simdata/Y_sim.csv", col_names = FALSE) |>
-  as.matrix() |>
+sim_var_model <- function(c_vec, A_1, A_2, Sigma, T_obs, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+  stopifnot(T_obs >= 3)
+
+  K <- length(c_vec)
+  Y <- matrix(0, nrow = T_obs, ncol = K)
+
+  epsilon <- MASS::mvrnorm(n = T_obs, mu = rep(0, K), Sigma = Sigma)
+
+  # Unconditional mean of the stable VAR(2)
+  mu <- solve(diag(K) - A_1 - A_2, c_vec)
+  Y[1, ] <- MASS::mvrnorm(1, mu, Sigma)
+  Y[2, ] <- MASS::mvrnorm(1, mu, Sigma)
+
+  for (t in 3:T_obs) {
+    Y[t, ] <- c_vec + A_1 %*% Y[t - 1, ] + A_2 %*% Y[t - 2, ] + epsilon[t, ]
+  }
+  Y
+}
+
+T_obs <- 200
+c_vec <- c(2.5, 1.5)
+A_1 <- matrix(c(0.45, -0.15,
+                -0.35, 0.30), nrow = 2)
+A_2 <- matrix(c(0.05, -0.05,
+                -0.05, 0.03), nrow = 2)
+Sigma <- matrix(c(1.0, 0.1,
+                  0.1, 1.0), nrow = 2)
+
+Y <- sim_var_model(c_vec, A_1, A_2, Sigma, T_obs, seed = 1) |>
   scale()
 
 stan_data <- list(

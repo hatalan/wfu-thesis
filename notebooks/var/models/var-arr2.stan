@@ -28,6 +28,7 @@ data {
   real<lower=0> mean_R2; // mean of the R2 prior
   real<lower=0> prec_R2; // precision of the R2 prior
   real<lower=0> sigma_sd; // sd of sigma prior
+  int<lower=0, upper=1> prior_only;
 }
 
 transformed data {
@@ -102,7 +103,9 @@ model {
   target += normal_lpdf(alpha | 0, 1);
 
   // likelihood
-  matrix[N, N] Sigma = quad_form_diag(Rho, sigma);
-  for (t in (p + 1):T)
-    target += multi_normal_lpdf(Y[t] | mu[t], Sigma);
+  if (!prior_only) {
+    matrix[N, N] Sigma = quad_form_diag(Rho, sigma);
+    for (t in (p + 1):T)
+      target += multi_normal_lpdf(Y[t] | mu[t], Sigma);
+  }
 }
