@@ -21,8 +21,7 @@ var_dir  <- "notebooks/var"
 sim_file <- file.path(var_dir, "simdata", "Y_sim.csv")
 out_dir  <- file.path(var_dir, "results", "var-sweep")
 
-# ---- Settings (decisions live here) -----------------------------------------
-
+# Settings
 settings <- list(
   models      = c("normal", "minnesota", "arr2"),
   p_grid      = 1:8,
@@ -34,15 +33,17 @@ settings <- list(
   chains = 4, iter_warmup = 1000, iter_sampling = 1000, adapt_delta = 0.95,
   seed_base = 20261103,
 
-  sigma_sd  = 1,                              # shared by all three models
+  sigma_sd  = 1,
   normal    = list(A_sd = 1),
   minnesota = list(lambda = 0.2, theta = 0.5, lag_decay = 2,
                    delta_own = 0, s_ar_order = 4),
   arr2      = list(mean_R2 = 1/3, prec_R2 = 3, xi_split = c(1, 1),
-                   conc = "flat")             # "flat" or "minnesota"
+                   conc = "flat"),            
+  arr2      = list(mean_R2 = 1/3, prec_R2 = 3, xi_split = c(1, 1),
+                   conc = "minnesota")
 )
 
-# DGP: identical to var-2-notebook.qmd, so Y_sim.csv is the same file either way.
+# Data generating process (identical to settings in var-2-notebook.qmd)
 dgp <- list(
   T_obs = 200, seed = 1,
   c_vec = c(2.5, 1.5),
@@ -51,8 +52,9 @@ dgp <- list(
   Sigma = matrix(c(1.0, 0.1, 0.1, 1.0), nrow = 2)
 )
 
-# ---- Helpers ----------------------------------------------------------------
+### Helper functions
 
+# Create grid from settings list
 make_grid <- function() {
   g <- expand.grid(model = settings$models, p = settings$p_grid,
                    mode = names(settings$modes), stringsAsFactors = FALSE)
@@ -60,6 +62,7 @@ make_grid <- function() {
   g
 }
 
+# Simulated VAR function
 sim_var <- function(c_vec, A_1, A_2, Sigma, T_obs, seed) {
   set.seed(seed)
   K <- length(c_vec)
@@ -73,8 +76,10 @@ sim_var <- function(c_vec, A_1, A_2, Sigma, T_obs, seed) {
   Y
 }
 
+# Extract Stan model path
 model_path <- function(model) file.path(var_dir, "models", paste0("var-", model, ".stan"))
 
+# Load Stan model
 load_model <- function(model) {
   cmdstan_model(model_path(model), stanc_options = list("O1"))  # no-op if compiled
 }
@@ -88,6 +93,7 @@ arr2_conc <- function(p, N, type) {
        xi_cross = rep(rep(base, each = N - 1), N))
 }
 
+# Prepare data
 prep_data <- function() {
   Y <- as.matrix(read.csv(sim_file, header = FALSE))
   Y_tr <- Y[seq_len(settings$T_train), , drop = FALSE]
@@ -101,8 +107,7 @@ prep_data <- function() {
   list(Y = Ys, center = center, scale = scale)
 }
 
-# ---- Setup: simulate + compile ----------------------------------------------
-
+# Run full sweep set-up (generating data, grid)
 run_setup <- function() {
   dir.create(dirname(sim_file), showWarnings = FALSE, recursive = TRUE)
   dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
@@ -123,8 +128,7 @@ run_setup <- function() {
   message(nrow(grid), " array tasks")
 }
 
-# ---- One grid cell ----------------------------------------------------------
-
+# Run a grid cell
 run_task <- function(id) {
   grid <- make_grid()
   if (id < 1 || id > nrow(grid)) stop("task id ", id, " outside 1..", nrow(grid))
@@ -199,7 +203,7 @@ run_task <- function(id) {
           sum(res$diagnostics$num_divergent), " divergences)")
 }
 
-# ---- Entry point ------------------------------------------------------------
+# Entry point
 
 args <- commandArgs(trailingOnly = TRUE)
 cmd  <- if (length(args)) args[1] else "usage"

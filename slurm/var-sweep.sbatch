@@ -4,14 +4,15 @@
 #   - as an array task it fits one (model, p, mode) grid cell.
 # Submit with slurm/submit-var-sweep.sh from the repository root.
 
-#SBATCH --job-name=var-sweep
-#SBATCH --account=TODO            # DEAC account
-#SBATCH --partition=TODO          # DEAC partition
+#SBATCH --job-name=var-sweep-01
+#SBATCH --account=cademartorigrp            # DEAC account
+#SBATCH --partition=small          # DEAC partition
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4         # one per chain
 #SBATCH --mem=4G
 #SBATCH --time=01:00:00
+#SBATCH --mail-user=hatan25@wfu.edu
 #SBATCH --output=slurm/logs/%x_%A_%a.out
 
 set -euo pipefail
