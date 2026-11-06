@@ -4,15 +4,9 @@ format: html
 editor: visual
 ---
 
-Results of VAR lag sweep 02 (`slurm/var-sweep-02.R`). Each prior was fit at p = 1..12 to data
-from four DGPs (`var-dgp.R`): the baseline VAR(2), a long-decay VAR(6), a sparse VAR with lags 1
-and 4, and a near-unit-root VAR(2). All fits use the likelihood, so every R2 here is the
-posterior R2, conditional on the data. Run the sweep on the cluster first; this notebook only
-reads `results/var-sweep-02/`.
+Results of VAR lag sweep 02 (`slurm/var-sweep-02.R`). Each prior was fit at p = 1..12 to data from four DGPs (`var-dgp.R`): the baseline VAR(2), a long-decay VAR(6), a sparse VAR with lags 1 and 4, and a near-unit-root VAR(2). All fits use the likelihood, so every R2 here is the posterior R2, conditional on the data. Run the sweep on the cluster first; this notebook only reads `results/var-sweep-02/`.
 
-All quantities are on the standardized scale the models were fit on. The true values are put on
-that scale with the same train-window standard deviations D: A_i(std) = D^-1 A_i D and
-Sigma(std) = D^-1 Sigma D^-1. Per-equation R2 is unaffected by this; the trace R2 is not.
+All quantities are on the standardized scale the models were fit on. The true values are put on that scale with the same train-window standard deviations D: A_i(std) = D\^-1 A_i D and Sigma(std) = D\^-1 Sigma D\^-1. Per-equation R2 is unaffected by this; the trace R2 is not.
 
 ## Loading packages
 
@@ -24,8 +18,7 @@ source("var-dgp.R")      # dgp_r2() for the true R2
 
 ## Load results
 
-Each result file is summarised as it is read (R2 quantiles, coefficient posterior means and
-intervals, diagnostics), so the full draws are never all in memory.
+Each result file is summarised as it is read (R2 quantiles, coefficient posterior means and intervals, diagnostics), so the full draws are never all in memory.
 
 ```{r}
 sweep_id <- "var-sweep-02"
@@ -138,8 +131,7 @@ coef_truth <- truth_std %>%
 
 ## Sampler diagnostics
 
-Cells with divergences, R-hat above 1.01, or a meaningful share of non-stationary posterior
-draws (R2 below is summarised over stationary draws only).
+Cells with divergences, R-hat above 1.01, or a meaningful share of non-stationary posterior draws (R2 below is summarised over stationary draws only).
 
 ```{r}
 diag_tbl %>%
@@ -150,8 +142,7 @@ diag_tbl %>%
 
 ## Posterior R2 by lag order and DGP
 
-Solid curves are posterior medians with 90% bands; the dashed line is the DGP's true R2 and the
-dotted vertical line its true lag order. Shown for the first replicate.
+Solid curves are posterior medians with 90% bands; the dashed line is the DGP's true R2 and the dotted vertical line its true lag order. Shown for the first replicate.
 
 ```{r}
 #| fig-width: 10
@@ -219,16 +210,6 @@ p_r2_measures
 
 ## Coefficient RMSE against the truth
 
-RMSE of posterior-mean coefficients, split three ways:
-
-- **All fitted coefficients:** every coefficient the model estimates (lags 1..p).
-- **True nonzero coefficients:** the coefficients that are nonzero in the DGP. A model with p
-  below the true lag order implicitly sets the missing lags to zero, and is scored that way.
-- **True zero coefficients:** fitted coefficients whose true value is zero, i.e. how well
-  spurious lags are shrunk (lags beyond the true order, plus lags 2 and 3 for the sparse DGP).
-
-Averaged over replicates.
-
 ```{r}
 coef_err <- coef_summary %>%
   nest(coefs = c(lag, row, col, est, q05, q95)) %>%
@@ -290,10 +271,6 @@ p_rmse
 ```
 
 ## Estimated coefficients against the truth
-
-Posterior mean and 90% interval of every coefficient at one lag order (`p_show`, default the
-largest p, so redundant lags are visible), with the true value as a black cross. One chart per
-DGP; panels are the four coefficient positions. First replicate.
 
 ```{r}
 p_show <- max(p_grid)
