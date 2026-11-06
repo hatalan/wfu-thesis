@@ -22,7 +22,7 @@ RSCRIPT=/deac/opt/rocky9-noarch/r/4.3.3/lib64/R/bin/Rscript
 export CMDSTAN=/deac/sta/classes/sta720/software/cmdstan/2.37.0
 
 if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
-  Rscript slurm/var-sweep-01.R setup
+  $RSCRIPT slurm/var-sweep-01.R setup
 else
-  Rscript slurm/var-sweep-01.R task "$SLURM_ARRAY_TASK_ID"
+  $RSCRIPT slurm/var-sweep-01.R task "$SLURM_ARRAY_TASK_ID"
 fi
