@@ -1,0 +1,356 @@
+---
+title: "var-sweep-02-results"
+format: html
+editor: visual
+---
+
+Results of VAR lag sweep 02 (`slurm/var-sweep-02.R`). Each prior was fit at p = 1..12 to data
+from four DGPs (`var-dgp.R`): the baseline VAR(2), a long-decay VAR(6), a sparse VAR with lags 1
+and 4, and a near-unit-root VAR(2). All fits use the likelihood, so every R2 here is the
+posterior R2, conditional on the data. Run the sweep on the cluster first; this notebook only
+reads `results/var-sweep-02/`.
+
+All quantities are on the standardized scale the models were fit on. The true values are put on
+that scale with the same train-window standard deviations D: A_i(std) = D^-1 A_i D and
+Sigma(std) = D^-1 Sigma D^-1. Per-equation R2 is unaffected by this; the trace R2 is not.
+
+## Loading packages
+
+```{r}
+library(tidyverse)
+library(posterior)
+source("var-dgp.R")      # dgp_r2() for the true R2
+```
+
+## Load results
+
+Each result file is summarised as it is read (R2 quantiles, coefficient posterior means and
+intervals, diagnostics), so the full draws are never all in memory.
+
+```{r}
+sweep_id <- "var-sweep-02"
+res_dir  <- file.path("results", sweep_id)
+fig_dir  <- file.path("figures", sweep_id)
+dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
+
+truth  <- readRDS(file.path(res_dir, "truth.rds"))
+s      <- truth$settings
+dgps   <- truth$dgps
+p_grid <- s$p_grid
+
+summarise_fit <- function(f) {
+  r <- readRDS(f)
+  d <- as_tibble(as.data.frame(r$draws))           # drop draws_df class
+  add_cell <- function(x) mutate(x, dgp = r$cell$dgp, rep = r$cell$rep,
+                                 model = r$cell$model, p = r$cell$p, .before = 1)
+  stable <- d$stable == 1
+
+  r2_cols <- c(grep("^R2_eq\\[", names(d), value = TRUE), "R2_mean", "R2_trace")
+  r2 <- map_dfr(r2_cols, function(m) {
+    x <- d[[m]][stable]
+    tibble(measure   = m,
+           prop_stat = mean(stable),
+           r2_med    = if (length(x)) median(x) else NA_real_,
+           r2_q05    = if (length(x)) unname(quantile(x, 0.05)) else NA_real_,
+           r2_q95    = if (length(x)) unname(quantile(x, 0.95)) else NA_real_)
+  })
+
+  A_cols <- grep("^A\\[", names(d), value = TRUE)
+  idx    <- str_match(A_cols, "^A\\[(\\d+),(\\d+),(\\d+)\\]$")
+  coef <- tibble(lag = as.integer(idx[, 2]), row = as.integer(idx[, 3]),
+                 col = as.integer(idx[, 4]),
+                 est = unname(colMeans(d[A_cols])),
+                 q05 = unname(map_dbl(d[A_cols], ~ quantile(.x, 0.05))),
+                 q95 = unname(map_dbl(d[A_cols], ~ quantile(.x, 0.95))))
+
+  diag <- tibble(divergences = sum(r$diagnostics$num_divergent),
+                 max_rhat    = max(r$summary$rhat, na.rm = TRUE),
+                 prop_stable = mean(stable),
+                 time_s      = round(r$time, 1))
+
+  list(r2 = add_cell(r2), coef = add_cell(coef), diag = add_cell(diag),
+       scale = tibble(dgp = r$cell$dgp, rep = r$cell$rep, scale = list(r$scale)))
+}
+
+files <- list.files(res_dir, pattern = "_r\\d{2}_.*_p\\d{2}_fit\\.rds$", full.names = TRUE)
+fits  <- map(files, summarise_fit)
+
+r2_summary   <- map_dfr(fits, "r2")
+coef_summary <- map_dfr(fits, "coef")
+diag_tbl     <- map_dfr(fits, "diag")
+scales       <- map_dfr(fits, "scale") %>% distinct(dgp, rep, .keep_all = TRUE)
+
+length(files)
+```
+
+## Labels
+
+```{r}
+model_labels <- c(
+  normal    = sprintf("Normal (sd = %g)", s$normal$A_sd),
+  minnesota = sprintf("Minnesota (lambda = %g)", s$minnesota$lambda),
+  arr2_flat = sprintf("ARR2 flat (R2 mean = %.2g)", s$arr2_flat$mean_R2),
+  arr2_minn = sprintf("ARR2 Minn. (R2 mean = %.2g)", s$arr2_minn$mean_R2)
+)
+dgp_labels <- map_chr(dgps[s$dgps], ~ sprintf("%s (true p = %d)", .x$name, .x$p))
+
+label_model   <- function(m) factor(model_labels[m], levels = model_labels)
+label_dgp     <- function(g) factor(dgp_labels[g], levels = dgp_labels)
+label_measure <- function(m) {
+  lab <- case_when(
+    str_detect(m, "^R2_eq") ~ paste("Equation", str_match(m, "\\[(\\d+)\\]")[, 2]),
+    m == "R2_mean"          ~ "Mean across equations",
+    m == "R2_trace"         ~ "Trace"
+  )
+  fct_relevel(factor(lab), "Mean across equations", "Trace", after = Inf)
+}
+
+dgp_p_true <- tibble(dgp = s$dgps, p_true = map_int(dgps[s$dgps], "p")) %>%
+  mutate(dgp_lab = label_dgp(dgp))
+```
+
+## True values on the standardized scale
+
+```{r}
+std_dgp <- function(g, sc) {
+  D_inv <- diag(1 / sc, length(sc))
+  D     <- diag(sc, length(sc))
+  list(A     = map(dgps[[g]]$A, ~ D_inv %*% .x %*% D),
+       Sigma = D_inv %*% dgps[[g]]$Sigma %*% D_inv)
+}
+
+truth_std <- scales %>%
+  mutate(std = map2(dgp, scale, std_dgp))
+
+r2_truth <- truth_std %>%
+  mutate(r2 = map(std, function(t) {
+    v <- dgp_r2(t$A, t$Sigma)
+    tibble(measure = c(sprintf("R2_eq[%d]", seq_along(v$R2_eq)), "R2_mean", "R2_trace"),
+           r2_true = c(v$R2_eq, v$R2_mean, v$R2_trace))
+  })) %>%
+  select(dgp, rep, r2) %>%
+  unnest(r2)
+
+coef_truth <- truth_std %>%
+  mutate(A = map(std, "A")) %>%
+  select(dgp, rep, A)
+```
+
+## Sampler diagnostics
+
+Cells with divergences, R-hat above 1.01, or a meaningful share of non-stationary posterior
+draws (R2 below is summarised over stationary draws only).
+
+```{r}
+diag_tbl %>%
+  filter(divergences > 0 | max_rhat > 1.01 | prop_stable < 0.99) %>%
+  arrange(dgp, model, p) %>%
+  print(n = Inf)
+```
+
+## Posterior R2 by lag order and DGP
+
+Solid curves are posterior medians with 90% bands; the dashed line is the DGP's true R2 and the
+dotted vertical line its true lag order. Shown for the first replicate.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 7
+r2_plot_df <- r2_summary %>%
+  filter(rep == min(rep)) %>%
+  mutate(model_lab = label_model(model), dgp_lab = label_dgp(dgp),
+         measure_lab = label_measure(measure))
+
+r2_truth_df <- r2_truth %>%
+  filter(rep == min(rep)) %>%
+  mutate(dgp_lab = label_dgp(dgp), measure_lab = label_measure(measure))
+
+p_r2_mean <- r2_plot_df %>%
+  filter(measure == "R2_mean") %>%
+  ggplot(aes(p, r2_med, colour = model_lab, fill = model_lab)) +
+  geom_vline(data = dgp_p_true, aes(xintercept = p_true),
+             linetype = "dotted", colour = "grey50") +
+  geom_hline(data = filter(r2_truth_df, measure == "R2_mean"),
+             aes(yintercept = r2_true), linetype = "dashed", colour = "grey20") +
+  geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.12, colour = NA) +
+  geom_line() +
+  geom_point(size = 1.2) +
+  facet_wrap(~ dgp_lab, nrow = 2) +
+  scale_x_continuous(breaks = p_grid) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Lag order p",
+       y = expression("Posterior mean " * R^2 * " (stationary draws)"),
+       colour = NULL, fill = NULL,
+       title = "Posterior mean R-squared by lag order and DGP",
+       subtitle = "Median and 90% band; dashed: true R2; dotted: true lag order") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_r2_mean
+```
+
+Same, for each R2 variant.
+
+```{r}
+#| fig-width: 11
+#| fig-height: 9
+p_r2_measures <- r2_plot_df %>%
+  ggplot(aes(p, r2_med, colour = model_lab, fill = model_lab)) +
+  geom_vline(data = dgp_p_true, aes(xintercept = p_true),
+             linetype = "dotted", colour = "grey50") +
+  geom_hline(data = r2_truth_df, aes(yintercept = r2_true),
+             linetype = "dashed", colour = "grey20") +
+  geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.12, colour = NA) +
+  geom_line() +
+  geom_point(size = 1) +
+  facet_grid(measure_lab ~ dgp_lab) +
+  scale_x_continuous(breaks = seq(min(p_grid), max(p_grid), by = 2)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Lag order p",
+       y = expression("Posterior " * R^2 * " (stationary draws)"),
+       colour = NULL, fill = NULL,
+       title = "Posterior R-squared by lag order, DGP and R2 variant",
+       subtitle = "Median and 90% band; dashed: true R2; dotted: true lag order") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_r2_measures
+```
+
+## Coefficient RMSE against the truth
+
+RMSE of posterior-mean coefficients, split three ways:
+
+- **All fitted coefficients:** every coefficient the model estimates (lags 1..p).
+- **True nonzero coefficients:** the coefficients that are nonzero in the DGP. A model with p
+  below the true lag order implicitly sets the missing lags to zero, and is scored that way.
+- **True zero coefficients:** fitted coefficients whose true value is zero, i.e. how well
+  spurious lags are shrunk (lags beyond the true order, plus lags 2 and 3 for the sparse DGP).
+
+Averaged over replicates.
+
+```{r}
+coef_err <- coef_summary %>%
+  nest(coefs = c(lag, row, col, est, q05, q95)) %>%
+  left_join(coef_truth, by = c("dgp", "rep")) %>%
+  mutate(err = pmap(list(coefs, A, p), function(coefs, A, p) {
+    N      <- nrow(A[[1]])
+    p_true <- length(A)
+    expand_grid(lag = seq_len(max(p, p_true)), row = seq_len(N), col = seq_len(N)) %>%
+      mutate(truth = pmap_dbl(list(lag, row, col), function(l, i, j)
+        if (l <= p_true) A[[l]][i, j] else 0)) %>%
+      left_join(select(coefs, lag, row, col, est), by = c("lag", "row", "col")) %>%
+      mutate(est = replace_na(est, 0))
+  })) %>%
+  select(dgp, rep, model, p, err) %>%
+  unnest(err)
+
+set_levels <- c("All fitted coefficients", "True nonzero coefficients",
+                "True zero coefficients")
+
+rmse_tbl <- bind_rows(
+  coef_err %>% filter(lag <= p)               %>% mutate(set = set_levels[1]),
+  coef_err %>% filter(truth != 0)             %>% mutate(set = set_levels[2]),
+  coef_err %>% filter(truth == 0, lag <= p)   %>% mutate(set = set_levels[3])
+) %>%
+  group_by(dgp, rep, model, p, set) %>%
+  summarise(rmse = sqrt(mean((est - truth)^2)), .groups = "drop") %>%
+  group_by(dgp, model, p, set) %>%
+  summarise(rmse = mean(rmse), .groups = "drop") %>%
+  mutate(set = factor(set, levels = set_levels),
+         model_lab = label_model(model), dgp_lab = label_dgp(dgp))
+
+rmse_tbl %>%
+  filter(set == set_levels[1]) %>%
+  pivot_wider(id_cols = c(dgp, p), names_from = model, values_from = rmse) %>%
+  mutate(across(where(is.numeric) & !p, ~ round(.x, 3))) %>%
+  print(n = Inf)
+```
+
+```{r}
+#| fig-width: 11
+#| fig-height: 8
+p_rmse <- rmse_tbl %>%
+  ggplot(aes(p, rmse, colour = model_lab)) +
+  geom_vline(data = dgp_p_true, aes(xintercept = p_true),
+             linetype = "dotted", colour = "grey50") +
+  geom_line() +
+  geom_point(size = 1.2) +
+  facet_grid(set ~ dgp_lab, scales = "free_y") +
+  scale_x_continuous(breaks = seq(min(p_grid), max(p_grid), by = 2)) +
+  expand_limits(y = 0) +
+  labs(x = "Lag order p", y = "RMSE of posterior-mean coefficients",
+       colour = NULL,
+       title = "Coefficient RMSE against the truth by lag order and DGP",
+       subtitle = "Standardized scale; dotted: true lag order") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_rmse
+```
+
+## Estimated coefficients against the truth
+
+Posterior mean and 90% interval of every coefficient at one lag order (`p_show`, default the
+largest p, so redundant lags are visible), with the true value as a black cross. One chart per
+DGP; panels are the four coefficient positions. First replicate.
+
+```{r}
+p_show <- max(p_grid)
+
+coef_label <- function(row, col) {
+  ifelse(row == col, sprintf("y%d on own lags", row), sprintf("y%d on lags of y%d", row, col))
+}
+
+coef_plot_df <- coef_summary %>%
+  filter(p == p_show, rep == min(rep)) %>%
+  mutate(model_lab = label_model(model), coef_lab = coef_label(row, col))
+
+coef_truth_df <- coef_truth %>%
+  filter(rep == min(rep)) %>%
+  mutate(tr = map(A, function(A) {
+    N <- nrow(A[[1]])
+    expand_grid(lag = seq_len(p_show), row = seq_len(N), col = seq_len(N)) %>%
+      mutate(truth = pmap_dbl(list(lag, row, col), function(l, i, j)
+        if (l <= length(A)) A[[l]][i, j] else 0))
+  })) %>%
+  select(dgp, tr) %>%
+  unnest(tr) %>%
+  mutate(coef_lab = coef_label(row, col))
+
+plot_coefs <- function(g) {
+  ggplot(filter(coef_plot_df, dgp == g),
+         aes(lag, est, colour = model_lab)) +
+    geom_hline(yintercept = 0, colour = "grey70") +
+    geom_pointrange(aes(ymin = q05, ymax = q95),
+                    position = position_dodge(width = 0.7), size = 0.2) +
+    geom_point(data = filter(coef_truth_df, dgp == g), aes(lag, truth),
+               inherit.aes = FALSE, shape = 4, size = 2.5, stroke = 1) +
+    facet_wrap(~ coef_lab, ncol = 2) +
+    scale_x_continuous(breaks = seq_len(p_show)) +
+    labs(x = "Lag", y = "Coefficient (standardized scale)", colour = NULL,
+         title = sprintf("Estimated coefficients against the truth: %s", dgp_labels[g]),
+         subtitle = sprintf("Fitted with p = %d; posterior mean and 90%% interval; x: true value",
+                            p_show)) +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+}
+
+p_coefs <- map(set_names(s$dgps), plot_coefs)
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 7
+walk(p_coefs, print)
+```
+
+## Save figures
+
+```{r}
+ggsave(file.path(fig_dir, "var_post_r2_mean_by_dgp.png"),     p_r2_mean,     width = 10, height = 7, dpi = 150)
+ggsave(file.path(fig_dir, "var_post_r2_measures_by_dgp.png"), p_r2_measures, width = 11, height = 9, dpi = 150)
+ggsave(file.path(fig_dir, "var_coef_rmse_by_dgp.png"),        p_rmse,        width = 11, height = 8, dpi = 150)
+iwalk(p_coefs, ~ ggsave(file.path(fig_dir, sprintf("var_coefs_p%02d_%s.png", p_show, .y)),
+                        .x, width = 10, height = 7, dpi = 150))
+```
