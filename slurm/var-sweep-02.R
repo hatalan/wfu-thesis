@@ -3,7 +3,7 @@
 # Four coefficient priors (independent normal, Minnesota, ARR2 with flat and with
 # Minnesota-decay Dirichlet concentrations) are fit at lag orders p = 1..12 to data
 # from each DGP in notebooks/var/var-dgp.R (baseline VAR(2), long-decay VAR(6),
-# sparse lags 1 and 4, near unit root), both to the data and prior-only.
+# sparse lags 1 and 4, near unit root). Fits only: prior-only runs are in var-sweep-01.
 #
 #   Rscript slurm/var-sweep-02.R setup       # simulate data, compile models, write grid (once)
 #   Rscript slurm/var-sweep-02.R task <id>   # run one grid cell (id = SLURM_ARRAY_TASK_ID)
@@ -34,7 +34,7 @@ settings <- list(
   n_rep       = 1,                            # simulated datasets per DGP
   models      = c("normal", "minnesota", "arr2_flat", "arr2_minn"),
   p_grid      = 1:12,
-  modes       = c(fit = 0L, prior = 1L),      # value = prior_only flag
+  modes       = c(fit = 0L),                  # value = prior_only flag; add prior = 1L for prior-only runs
   T_obs       = 200,                          # simulated length (after burn-in)
   T_train     = 150,                          # fit on rows 1:T_train, rest held out
   burn        = 500,                          # simulation burn-in, discarded
