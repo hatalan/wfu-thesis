@@ -18,7 +18,7 @@
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
 
-module load R                     # TODO: exact module name from `module avail R`
+RSCRIPT=/deac/opt/rocky9-noarch/r/4.3.3/lib64/R/bin/Rscript
 export CMDSTAN=/deac/sta/classes/sta720/software/cmdstan/2.37.0
 
 if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
