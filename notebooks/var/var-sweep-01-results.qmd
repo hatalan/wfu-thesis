@@ -79,7 +79,7 @@ r2_draws <- map_dfr(res, function(r) {
   mutate(
     stable = stable == 1,
     measure_lab = case_when(
-      str_detect(measure, "R2_eq") ~ paste("Equation", str_extract(measure, "\\d+")),
+      str_detect(measure, "R2_eq") ~ paste("Equation", str_match(measure, "\\[(\\d+)\\]")[, 2]),
       measure == "R2_mean"         ~ "Mean across equations",
       measure == "R2_trace"        ~ "Trace"
     ),
