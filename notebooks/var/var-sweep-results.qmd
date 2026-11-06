@@ -1,0 +1,259 @@
+---
+title: "var-sweep-results"
+format: html
+editor: visual
+---
+
+Results of the VAR lag-misspecification sweep (`slurm/var-sweep.R`). Every model was fit
+to the same simulated VAR(2) at lag orders p = 1..8, with the likelihood (`fit`) and
+without it (`prior`). Run the sweep on the cluster first; this notebook only reads
+`results/var-sweep/`.
+
+## Loading packages
+
+```{r}
+library(tidyverse)
+library(posterior)
+```
+
+## Load results
+
+```{r}
+res_dir <- "results/var-sweep"
+dir.create("figures", showWarnings = FALSE)
+
+truth  <- readRDS(file.path(res_dir, "truth.rds"))
+s      <- truth$settings
+A_true <- truth$dgp$A                 # list of true lag matrices, original scale
+p_true <- length(A_true)
+N      <- nrow(A_true[[1]])
+
+files <- list.files(res_dir, pattern = "_p\\d{2}_(fit|prior)\\.rds$", full.names = TRUE)
+res   <- map(files, readRDS)
+
+model_labels <- c(
+  normal    = sprintf("Normal (sd = %g)", s$normal$A_sd),
+  minnesota = sprintf("Minnesota (lambda = %g)", s$minnesota$lambda),
+  arr2_flat = sprintf("ARR2 flat (R2 mean = %.2g)", s$arr2_flat$mean_R2),
+  arr2_minn = sprintf("ARR2 Minn. (R2 mean = %.2g)", s$arr2_minn$mean_R2)
+)
+label_model <- function(m) factor(model_labels[m], levels = model_labels)
+
+draws_tbl <- function(x) as_tibble(as.data.frame(x))   # drop draws_df class
+
+p_grid <- sort(unique(map_int(res, ~ as.integer(.x$cell$p))))
+length(res)
+```
+
+## Sampler diagnostics
+
+Check these before reading the charts: a cell with divergences or high R-hat should not be
+trusted.
+
+```{r}
+diag_tbl <- map_dfr(res, function(r) {
+  tibble(model       = r$cell$model,
+         p           = r$cell$p,
+         mode        = r$cell$mode,
+         divergences = sum(r$diagnostics$num_divergent),
+         max_rhat    = max(r$summary$rhat, na.rm = TRUE),
+         time_s      = round(r$time, 1))
+})
+
+diag_tbl %>%
+  filter(divergences > 0 | max_rhat > 1.01) %>%
+  arrange(mode, model, p) %>%
+  print(n = Inf)
+```
+
+## Population R2 draws
+
+`R2_eq[k]`, `R2_mean` and `R2_trace` are the generated quantities from the Stan models.
+They are NaN for non-stationary draws, so every R2 summary below is over stationary draws
+only, and stationarity is reported separately.
+
+```{r}
+r2_draws <- map_dfr(res, function(r) {
+  draws_tbl(r$draws) %>%
+    select(.draw, stable, starts_with("R2_eq"), R2_mean, R2_trace) %>%
+    mutate(model = r$cell$model, p = r$cell$p, mode = r$cell$mode)
+}) %>%
+  pivot_longer(c(starts_with("R2_eq"), R2_mean, R2_trace),
+               names_to = "measure", values_to = "r2") %>%
+  mutate(
+    stable = stable == 1,
+    measure_lab = case_when(
+      str_detect(measure, "R2_eq") ~ paste("Equation", str_extract(measure, "\\d+")),
+      measure == "R2_mean"         ~ "Mean across equations",
+      measure == "R2_trace"        ~ "Trace"
+    ),
+    measure_lab = fct_relevel(factor(measure_lab), "Mean across equations", "Trace",
+                              after = Inf),
+    model_lab = label_model(model)
+  )
+
+r2_summary <- r2_draws %>%
+  group_by(model, model_lab, p, mode, measure, measure_lab) %>%
+  summarise(
+    n_draws   = n(),
+    prop_stat = mean(stable),
+    mcse      = sqrt(prop_stat * (1 - prop_stat) / n_draws),
+    r2_med    = if (any(stable)) median(r2[stable]) else NA_real_,
+    r2_q05    = if (any(stable)) unname(quantile(r2[stable], 0.05)) else NA_real_,
+    r2_q95    = if (any(stable)) unname(quantile(r2[stable], 0.95)) else NA_real_,
+    .groups   = "drop"
+  )
+```
+
+## Prior-implied R2 by lag order
+
+The dashed line is the median of the ARR2 beta prior on R2 and the dotted lines its 90%
+interval. If ARR2 controls fit as intended, its curves should stay near that band as p
+grows, while the normal and Minnesota curves drift.
+
+```{r}
+arr2_ref <- with(s$arr2_flat,
+                 qbeta(c(0.05, 0.5, 0.95), mean_R2 * prec_R2, (1 - mean_R2) * prec_R2))
+
+p_prior_r2 <- r2_summary %>%
+  filter(mode == "prior", measure == "R2_mean") %>%
+  ggplot(aes(p, r2_med, colour = model_lab, fill = model_lab)) +
+  geom_hline(yintercept = arr2_ref[2], linetype = "dashed", colour = "grey40") +
+  geom_hline(yintercept = arr2_ref[c(1, 3)], linetype = "dotted", colour = "grey40") +
+  geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.12, colour = NA) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(breaks = p_grid) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Lag order p",
+       y = expression("Prior-implied mean " * R^2 * " (stationary draws)"),
+       colour = NULL, fill = NULL,
+       title = "Prior-implied mean R-squared by lag order",
+       subtitle = "Median and 90% band; grey lines: ARR2 R2 prior median and 90% interval") +
+  theme_minimal()
+
+p_prior_r2
+```
+
+Same chart for each R2 variant.
+
+```{r}
+#| fig-height: 7
+p_prior_r2_measures <- r2_summary %>%
+  filter(mode == "prior") %>%
+  ggplot(aes(p, r2_med, colour = model_lab, fill = model_lab)) +
+  geom_hline(yintercept = arr2_ref[2], linetype = "dashed", colour = "grey40") +
+  geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.12, colour = NA) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ measure_lab, ncol = 2) +
+  scale_x_continuous(breaks = p_grid) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Lag order p",
+       y = expression("Prior-implied " * R^2 * " (stationary draws)"),
+       colour = NULL, fill = NULL,
+       title = "Prior-implied R-squared by lag order and R2 variant",
+       subtitle = "Median and 90% band; dashed line: ARR2 R2 prior median") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_prior_r2_measures
+```
+
+## Stationary prior mass by lag order
+
+```{r}
+p_prior_stat <- r2_summary %>%
+  filter(mode == "prior", measure == "R2_mean") %>%
+  ggplot(aes(p, prop_stat, colour = model_lab)) +
+  geom_line() +
+  geom_pointrange(aes(ymin = prop_stat - 2 * mcse,
+                      ymax = prop_stat + 2 * mcse)) +
+  scale_x_continuous(breaks = p_grid) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Lag order p", y = "Proportion of prior draws stationary",
+       colour = NULL, title = "Stationary prior mass by lag order") +
+  theme_minimal()
+
+p_prior_stat
+```
+
+## Coefficient RMSE against the true VAR(2)
+
+The models were fit to standardized data, so the true lag matrices are put on the same
+scale: A_i(std) = D^-1 A_i D, with D = diag(train-window sd). Lags beyond 2 are truly
+zero, and a model with p = 1 implicitly sets its lag-2 coefficients to zero. RMSE uses the
+posterior mean of each coefficient (as in Kohns et al.) and is split three ways:
+
+- **All fitted coefficients:** every coefficient the model estimates (lags 1..p).
+- **True lags:** lags 1..2 only, which measures recovery of the real signal.
+- **Redundant lags:** lags 3..p only, which measures how well spurious lags are shrunk to
+  zero (empty for p ≤ 2).
+
+```{r}
+coef_err <- map_dfr(keep(res, ~ .x$cell$mode == "fit"), function(r) {
+  p     <- r$cell$p
+  D     <- diag(r$scale, N)
+  D_inv <- diag(1 / r$scale, N)
+  A_std <- map(A_true, ~ D_inv %*% .x %*% D)
+
+  post_mean <- colMeans(as_draws_matrix(subset_draws(r$draws, variable = "A")))
+  idx <- str_match(names(post_mean), "A\\[(\\d+),(\\d+),(\\d+)\\]")
+  est <- tibble(lag = as.integer(idx[, 2]), row = as.integer(idx[, 3]),
+                col = as.integer(idx[, 4]), est = unname(post_mean))
+
+  expand_grid(lag = seq_len(max(p, p_true)), row = seq_len(N), col = seq_len(N)) %>%
+    mutate(truth = pmap_dbl(list(lag, row, col), function(l, i, j)
+      if (l <= p_true) A_std[[l]][i, j] else 0)) %>%
+    left_join(est, by = c("lag", "row", "col")) %>%
+    mutate(est = replace_na(est, 0), model = r$cell$model, p = p)
+})
+
+set_levels <- c("All fitted coefficients",
+                sprintf("True lags (1-%d)", p_true),
+                sprintf("Redundant lags (%d-p)", p_true + 1))
+
+rmse_tbl <- bind_rows(
+  coef_err %>% filter(lag <= p)                 %>% mutate(set = set_levels[1]),
+  coef_err %>% filter(lag <= p_true)            %>% mutate(set = set_levels[2]),
+  coef_err %>% filter(lag > p_true, lag <= p)   %>% mutate(set = set_levels[3])
+) %>%
+  group_by(model, p, set) %>%
+  summarise(rmse = sqrt(mean((est - truth)^2)), .groups = "drop") %>%
+  mutate(set = factor(set, levels = set_levels), model_lab = label_model(model))
+
+rmse_tbl %>%
+  pivot_wider(id_cols = c(set, p), names_from = model, values_from = rmse) %>%
+  arrange(set, p) %>%
+  mutate(across(where(is.numeric) & !p, ~ round(.x, 3))) %>%
+  print(n = Inf)
+```
+
+```{r}
+#| fig-width: 10
+p_rmse <- rmse_tbl %>%
+  ggplot(aes(p, rmse, colour = model_lab)) +
+  geom_vline(xintercept = p_true, linetype = "dashed", colour = "grey60") +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ set, nrow = 1, scales = "free_y") +
+  scale_x_continuous(breaks = p_grid) +
+  expand_limits(y = 0) +
+  labs(x = "Lag order p", y = "RMSE of posterior-mean coefficients",
+       colour = NULL,
+       title = "Coefficient RMSE against the true VAR(2) by lag order",
+       subtitle = "Standardized scale; dashed line: true lag order") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_rmse
+```
+
+## Save figures
+
+```{r}
+ggsave("figures/var_prior_r2_by_p.png",          p_prior_r2,          width = 8,  height = 4.5, dpi = 150)
+ggsave("figures/var_prior_r2_by_p_measures.png", p_prior_r2_measures, width = 8,  height = 7,   dpi = 150)
+ggsave("figures/var_prior_stationarity.png",     p_prior_stat,        width = 8,  height = 4.5, dpi = 150)
+ggsave("figures/var_coef_rmse_by_p.png",         p_rmse,              width = 10, height = 4.5, dpi = 150)
+```
