@@ -4,11 +4,11 @@
 # Minnesota-decay Dirichlet concentrations) are fit to one
 # simulated VAR(2) dataset at lag orders p = 1..8, both to the data and prior-only.
 #
-#   Rscript slurm/var-sweep.R setup       # simulate data, compile models, write grid (once)
-#   Rscript slurm/var-sweep.R task <id>   # run one grid cell (id = SLURM_ARRAY_TASK_ID)
-#   Rscript slurm/var-sweep.R grid        # print the grid
+#   Rscript slurm/var-sweep-01.R setup       # simulate data, compile models, write grid (once)
+#   Rscript slurm/var-sweep-01.R task <id>   # run one grid cell (id = SLURM_ARRAY_TASK_ID)
+#   Rscript slurm/var-sweep-01.R grid        # print the grid
 #
-# Run from the repository root. Submit with slurm/submit-var-sweep.sh.
+# Run from the repository root. Submit with slurm/submit-var-sweep-01.sh.
 
 suppressPackageStartupMessages({
   library(cmdstanr)
@@ -20,7 +20,8 @@ if (dir.exists(cmdstan_dir)) set_cmdstan_path(cmdstan_dir)
 
 var_dir  <- "notebooks/var"
 sim_file <- file.path(var_dir, "simdata", "Y_sim.csv")
-out_dir  <- file.path(var_dir, "results", "var-sweep")
+sweep_id <- "var-sweep-01"                     # change for a new sweep version
+out_dir  <- file.path(var_dir, "results", sweep_id)
 
 # Settings
 settings <- list(
@@ -217,5 +218,5 @@ switch(cmd,
   task  = run_task(as.integer(if (length(args) > 1) args[2]
                               else Sys.getenv("SLURM_ARRAY_TASK_ID"))),
   grid  = print(make_grid()),
-  stop("usage: Rscript slurm/var-sweep.R setup | task <id> | grid")
+  stop("usage: Rscript slurm/var-sweep-01.R setup | task <id> | grid")
 )

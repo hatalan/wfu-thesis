@@ -1,13 +1,13 @@
 ---
-title: "var-sweep-results"
+title: "var-sweep-01-results"
 format: html
 editor: visual
 ---
 
-Results of the VAR lag-misspecification sweep (`slurm/var-sweep.R`). Every model was fit
+Results of the VAR lag-misspecification sweep (`slurm/var-sweep-01.R`). Every model was fit
 to the same simulated VAR(2) at lag orders p = 1..8, with the likelihood (`fit`) and
 without it (`prior`). Run the sweep on the cluster first; this notebook only reads
-`results/var-sweep/`.
+`results/var-sweep-01/`.
 
 ## Loading packages
 
@@ -19,8 +19,10 @@ library(posterior)
 ## Load results
 
 ```{r}
-res_dir <- "results/var-sweep"
-dir.create("figures", showWarnings = FALSE)
+sweep_id <- "var-sweep-01"
+res_dir  <- file.path("results", sweep_id)
+fig_dir  <- file.path("figures", sweep_id)
+dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
 
 truth  <- readRDS(file.path(res_dir, "truth.rds"))
 s      <- truth$settings
@@ -252,8 +254,8 @@ p_rmse
 ## Save figures
 
 ```{r}
-ggsave("figures/var_prior_r2_by_p.png",          p_prior_r2,          width = 8,  height = 4.5, dpi = 150)
-ggsave("figures/var_prior_r2_by_p_measures.png", p_prior_r2_measures, width = 8,  height = 7,   dpi = 150)
-ggsave("figures/var_prior_stationarity.png",     p_prior_stat,        width = 8,  height = 4.5, dpi = 150)
-ggsave("figures/var_coef_rmse_by_p.png",         p_rmse,              width = 10, height = 4.5, dpi = 150)
+ggsave(file.path(fig_dir, "var_prior_r2_by_p.png"),          p_prior_r2,          width = 8,  height = 4.5, dpi = 150)
+ggsave(file.path(fig_dir, "var_prior_r2_by_p_measures.png"), p_prior_r2_measures, width = 8,  height = 7,   dpi = 150)
+ggsave(file.path(fig_dir, "var_prior_stationarity.png"),     p_prior_stat,        width = 8,  height = 4.5, dpi = 150)
+ggsave(file.path(fig_dir, "var_coef_rmse_by_p.png"),         p_rmse,              width = 10, height = 4.5, dpi = 150)
 ```

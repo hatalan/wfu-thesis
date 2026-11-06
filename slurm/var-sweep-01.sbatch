@@ -2,7 +2,7 @@
 # One job script for both steps of the VAR lag sweep:
 #   - without an array index it runs setup (simulate data, compile models);
 #   - as an array task it fits one (model, p, mode) grid cell.
-# Submit with slurm/submit-var-sweep.sh from the repository root.
+# Submit with slurm/submit-var-sweep-01.sh from the repository root.
 
 #SBATCH --job-name=var-sweep-01
 #SBATCH --account=cademartorigrp            # DEAC account
@@ -22,7 +22,7 @@ module load R                     # TODO: exact module name from `module avail R
 export CMDSTAN=/deac/sta/classes/sta720/software/cmdstan/2.37.0
 
 if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
-  Rscript slurm/var-sweep.R setup
+  Rscript slurm/var-sweep-01.R setup
 else
-  Rscript slurm/var-sweep.R task "$SLURM_ARRAY_TASK_ID"
+  Rscript slurm/var-sweep-01.R task "$SLURM_ARRAY_TASK_ID"
 fi
