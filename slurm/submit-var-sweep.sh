@@ -3,7 +3,7 @@
 # Run from the repository root:  bash slurm/submit-var-sweep.sh
 set -euo pipefail
 
-N_TASKS=48        # 3 models x 8 lag orders x 2 modes (fit, prior); must match var-sweep.R
+N_TASKS=64        # 4 models x 8 lag orders x 2 modes (fit, prior); must match var-sweep.R
 MAX_RUNNING=16    # array concurrency cap
 
 setup_id=$(sbatch --parsable \

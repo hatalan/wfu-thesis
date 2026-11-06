@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 # VAR lag-misspecification sweep.
-# Three coefficient priors (independent normal, Minnesota, ARR2) are fit to one
+# Four coefficient priors (independent normal, Minnesota, ARR2 with flat and with
+# Minnesota-decay Dirichlet concentrations) are fit to one
 # simulated VAR(2) dataset at lag orders p = 1..8, both to the data and prior-only.
 #
 #   Rscript slurm/var-sweep.R setup       # simulate data, compile models, write grid (once)
@@ -23,7 +24,7 @@ out_dir  <- file.path(var_dir, "results", "var-sweep")
 
 # Settings
 settings <- list(
-  models      = c("normal", "minnesota", "arr2"),
+  models      = c("normal", "minnesota", "arr2_flat", "arr2_minn"),
   p_grid      = 1:8,
   modes       = c(fit = 0L, prior = 1L),      # value = prior_only flag
   T_train     = 150,                          # fit on rows 1:T_train, rest held out
@@ -37,9 +38,10 @@ settings <- list(
   normal    = list(A_sd = 1),
   minnesota = list(lambda = 0.2, theta = 0.5, lag_decay = 2,
                    delta_own = 0, s_ar_order = 4),
-  arr2      = list(mean_R2 = 1/3, prec_R2 = 3, xi_split = c(1, 1),
-                   conc = "flat"),            
-  arr2      = list(mean_R2 = 1/3, prec_R2 = 3, xi_split = c(1, 1),
+  # both run var-arr2.stan; they differ only in the Dirichlet concentrations
+  arr2_flat = list(mean_R2 = 1/3, prec_R2 = 3, xi_split = c(1, 1),
+                   conc = "flat"),
+  arr2_minn = list(mean_R2 = 1/3, prec_R2 = 3, xi_split = c(1, 1),
                    conc = "minnesota")
 )
 
@@ -77,7 +79,8 @@ sim_var <- function(c_vec, A_1, A_2, Sigma, T_obs, seed) {
 }
 
 # Extract Stan model path
-model_path <- function(model) file.path(var_dir, "models", paste0("var-", model, ".stan"))
+stan_name  <- function(model) if (startsWith(model, "arr2")) "arr2" else model
+model_path <- function(model) file.path(var_dir, "models", paste0("var-", stan_name(model), ".stan"))
 
 # Load Stan model
 load_model <- function(model) {
@@ -120,7 +123,7 @@ run_setup <- function() {
     message("Using existing ", sim_file)
   }
 
-  for (m in settings$models) load_model(m)
+  for (m in unique(vapply(settings$models, stan_name, ""))) load_model(m)
 
   grid <- make_grid()
   write.csv(grid, file.path(out_dir, "grid.csv"), row.names = FALSE)
@@ -159,8 +162,8 @@ run_task <- function(id) {
                                    lag_decay = mn$lag_decay,
                                    delta = rep(mn$delta_own, N), s = s))
 
-  } else if (cell$model == "arr2") {
-    ar <- settings$arr2
+  } else if (cell$model %in% c("arr2_flat", "arr2_minn")) {
+    ar <- settings[[cell$model]]
     stan_data <- c(stan_data,
                    list(mean_R2 = ar$mean_R2, prec_R2 = ar$prec_R2,
                         xi_split = ar$xi_split),
@@ -181,7 +184,8 @@ run_task <- function(id) {
     show_exceptions = FALSE
   )
 
-  vars <- intersect(c("alpha", "A", "sigma", "Rho", "R2", "w"),
+  vars <- intersect(c("alpha", "A", "sigma", "Rho", "R2", "w",
+                      "stable", "R2_eq", "R2_mean", "R2_trace"),
                     fit$metadata()$stan_variables)
 
   res <- list(
