@@ -1,0 +1,386 @@
+---
+title: "var-sweep-03-results"
+format: html
+editor: visual
+---
+
+Results of VAR sweep 03 (`slurm/var-sweep-03.R`): how each prior behaves as variables are added. The true model is an 8-variable VAR(2) made of four independent 2-variable blocks (`make_dgp_blocks()` in `var-dgp.R`), each a copy of the baseline VAR(2) scaled to its own population R2_trace (0.30, 0.60, 0.15, 0.45). Each prior is fit to the first N = 2, 4, 6, 8 series at p = 1, 2, 4, with the likelihood (`fit`) and without it (`prior`), on 3 simulated datasets. Every subset is made of whole blocks, so it is itself a VAR(2) and its true coefficients and innovation covariance are known exactly. All coefficients linking different blocks are truly zero.
+
+R2 throughout is the Bayesian R2 (Gelman, Goodrich, Gabry & Vehtari 2019, model-based residual variance): `R2B_eq[k]`, `R2B_mean` and `R2B_trace` from the Stan models, summarised over all draws. In prior-only runs it conditions on the observed lags. All quantities are on the standardized scale the models were fit on. Summaries are computed per fit and then averaged over the replicates.
+
+Run the sweep on the cluster first; this notebook reads `results/var-sweep-03/` and the simulated data in `simdata/var-sweep-03/`.
+
+## Loading packages
+
+```{r}
+library(tidyverse)
+library(posterior)
+source("var-dgp.R")      # make_dgp_blocks() objects in truth.rds, dgp_subset()
+```
+
+## Load results
+
+Each result file is summarised as it is read, so the full draws are never all in memory.
+
+```{r}
+sweep_id <- "var-sweep-03"
+res_dir  <- file.path("results", sweep_id)
+fig_dir  <- file.path("figures", sweep_id)
+dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
+
+truth  <- readRDS(file.path(res_dir, "truth.rds"))
+s      <- truth$settings
+dgp    <- truth$dgp
+N_grid <- s$N_grid
+p_grid <- s$p_grid
+
+qsum <- function(x) tibble(med = median(x), q05 = unname(quantile(x, 0.05)),
+                           q95 = unname(quantile(x, 0.95)))
+
+summarise_fit <- function(f) {
+  r <- readRDS(f)
+  d <- as_tibble(as.data.frame(r$draws))           # drop draws_df class
+  add_cell <- function(x) mutate(x, rep = r$cell$rep, mode = r$cell$mode, N = r$cell$N,
+                                 p = r$cell$p, model = r$cell$model, .before = 1)
+
+  eq_cols <- grep("^R2B_eq\\[", names(d), value = TRUE)
+  r2 <- bind_rows(
+    qsum(d$R2B_trace) %>% mutate(measure = "R2B_trace"),
+    qsum(d$R2B_mean)  %>% mutate(measure = "R2B_mean"),
+    # spread of fit across equations within each draw
+    qsum(apply(as.matrix(d[eq_cols]), 1, sd)) %>% mutate(measure = "R2B_eq_sd")
+  )
+
+  hyper_cols <- intersect(c("lambda", "theta", "lag_decay", "R2"), names(d))
+  hyper <- map_dfr(hyper_cols, ~ qsum(d[[.x]]) %>% mutate(param = .x))
+
+  A_cols <- grep("^A\\[", names(d), value = TRUE)
+  idx    <- str_match(A_cols, "^A\\[(\\d+),(\\d+),(\\d+)\\]$")
+  coef <- tibble(lag = as.integer(idx[, 2]), row = as.integer(idx[, 3]),
+                 col = as.integer(idx[, 4]), est = unname(colMeans(d[A_cols])))
+
+  diag <- tibble(divergences = sum(r$diagnostics$num_divergent),
+                 max_rhat    = max(r$summary$rhat, na.rm = TRUE),
+                 prop_stable = mean(d$stable == 1),
+                 time_s      = round(r$time, 1))
+
+  list(r2 = add_cell(r2), hyper = add_cell(hyper), coef = add_cell(coef),
+       diag = add_cell(diag),
+       meta = add_cell(tibble(row_first = r$rows_fit[1], row_last = r$rows_fit[2],
+                              scale = list(r$scale))))
+}
+
+files <- list.files(res_dir, pattern = "^block8_r\\d{2}_N\\d{2}_.*_p\\d{2}_(fit|prior)\\.rds$",
+                    full.names = TRUE)
+fits  <- map(files, summarise_fit)
+
+r2_summary    <- map_dfr(fits, "r2")
+hyper_summary <- map_dfr(fits, "hyper")
+coef_summary  <- map_dfr(fits, "coef")
+diag_tbl      <- map_dfr(fits, "diag")
+meta_tbl      <- map_dfr(fits, "meta")
+
+length(files)
+```
+
+## Labels
+
+```{r}
+model_labels <- c(
+  normal    = sprintf("Normal (sd = %g)", s$normal$A_sd),
+  minnesota = "Minnesota (hierarchical)",
+  arr2_flat = sprintf("ARR2 flat (R2 mean = %.2g)", s$arr2_flat$mean_R2),
+  arr2_minn = sprintf("ARR2 Minn. (R2 mean = %.2g)", s$arr2_minn$mean_R2)
+)
+label_model <- function(m) factor(model_labels[m], levels = model_labels)
+label_p     <- function(p) factor(sprintf("p = %d", p), levels = sprintf("p = %d", p_grid))
+
+# Average per-fit summaries over replicates
+avg_reps <- function(x, ...) {
+  x %>%
+    group_by(mode, N, p, model, ...) %>%
+    summarise(across(c(med, q05, q95), mean), n_rep = n(), .groups = "drop") %>%
+    mutate(model_lab = label_model(model), p_lab = label_p(p))
+}
+
+# R2 prior of ARR2 (median and 90% interval), the reference for the prior-only charts
+arr2_ref <- with(s$arr2_flat,
+                 qbeta(c(0.05, 0.5, 0.95), mean_R2 * prec_R2, (1 - mean_R2) * prec_R2))
+```
+
+## The true model
+
+Per-series population R2 and block structure.
+
+```{r}
+tibble(series = seq_along(dgp$block), block = dgp$block,
+       block_R2_trace = dgp$block_r2[dgp$block], R2_eq = round(dgp$R2_eq, 3)) %>%
+  print(n = Inf)
+
+cat("Spectral radius:", round(dgp$spectral_radius, 3), "\n")
+```
+
+## True Bayesian R2 for each subset
+
+The Bayesian R2 of the true coefficients and innovation variances of the first N series, on the same standardized data and the same likelihood rows as each fit. With `common_sample = TRUE` it does not depend on p.
+
+```{r}
+sim_std <- function(r, N) {
+  Y    <- as.matrix(read.csv(file.path("simdata", sweep_id, sprintf("block8_r%02d.csv", r)),
+                             header = FALSE))[, seq_len(N), drop = FALSE]
+  Y_tr <- Y[seq_len(s$T_train), , drop = FALSE]
+  sweep(sweep(Y, 2, colMeans(Y_tr)), 2, apply(Y_tr, 2, sd), "/")
+}
+
+# True model of the first N series on the standardized scale (D = train-window sds)
+true_std <- function(N, sc) {
+  t     <- dgp_subset(dgp, N)
+  D     <- diag(sc, N)
+  D_inv <- diag(1 / sc, N)
+  list(A = map(t$A, ~ D_inv %*% .x %*% D), Sigma = D_inv %*% t$Sigma %*% D_inv)
+}
+
+true_bayes_r2 <- function(A, Sigma, Y, rows) {
+  stopifnot(min(rows) > length(A))
+  fit <- Reduce(`+`, imap(A, function(Ai, i) Y[rows - i, , drop = FALSE] %*% t(Ai)))
+  v   <- apply(fit, 2, var)
+  s2  <- diag(Sigma)
+  tibble(R2B_trace = sum(v) / (sum(v) + sum(s2)), R2B_mean = mean(v / (v + s2)))
+}
+
+truth_tbl <- meta_tbl %>%
+  filter(mode == "fit") %>%
+  distinct(rep, N, p, .keep_all = TRUE) %>%
+  mutate(t = map2(N, scale, true_std),
+         r2 = pmap(list(t, rep, N, row_first, row_last, p), function(t, r, N, a, b, p)
+           true_bayes_r2(t$A, t$Sigma, sim_std(r, N), (a + p):b))) %>%
+  select(rep, N, p, t, r2) %>%
+  unnest(r2)
+
+r2_truth <- truth_tbl %>%
+  group_by(N, p) %>%
+  summarise(r2_true = mean(R2B_trace), .groups = "drop") %>%
+  mutate(p_lab = label_p(p))
+
+r2_truth %>% filter(p == min(p)) %>% select(N, r2_true)
+```
+
+## Sampler diagnostics
+
+Cells with divergences, R-hat above 1.01, or a meaningful share of non-stationary draws. The Bayesian R2 uses all draws, stationary or not.
+
+```{r}
+diag_tbl %>%
+  filter(divergences > 0 | max_rhat > 1.01 | prop_stable < 0.99) %>%
+  arrange(mode, model, N, p, rep) %>%
+  print(n = Inf)
+
+diag_tbl %>%
+  group_by(mode, model) %>%
+  summarise(cells = n(), with_divergences = sum(divergences > 0),
+            max_rhat = max(max_rhat), median_time_s = median(time_s),
+            max_time_s = max(time_s), .groups = "drop")
+```
+
+## Prior-implied Bayesian R2 as variables are added
+
+The main result. Solid curves are prior medians with 90% bands. The dashed line is the median of the ARR2 R2 prior and the dotted lines its 90% interval. ARR2 places its prior on the trace R2 directly, so its curves should stay roughly flat in N (rising slightly as the Jensen gap narrows with more coefficients). Minnesota's prior on each coefficient adds signal with every cross lag, so its curve should rise with N.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4.5
+prior_r2 <- r2_summary %>%
+  filter(mode == "prior", measure == "R2B_trace") %>%
+  avg_reps()
+
+p_prior_r2 <- prior_r2 %>%
+  ggplot(aes(N, med, colour = model_lab, fill = model_lab)) +
+  geom_hline(yintercept = arr2_ref[2], linetype = "dashed", colour = "grey40") +
+  geom_hline(yintercept = arr2_ref[c(1, 3)], linetype = "dotted", colour = "grey40") +
+  geom_ribbon(aes(ymin = q05, ymax = q95), alpha = 0.12, colour = NA) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ p_lab, nrow = 1) +
+  scale_x_continuous(breaks = N_grid) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Number of variables N",
+       y = expression("Prior-implied Bayesian " * R[trace]^2),
+       colour = NULL, fill = NULL,
+       title = "Prior-implied Bayesian R-squared by number of variables",
+       subtitle = "Median and 90% band, averaged over replicates; grey lines: ARR2 R2 prior median and 90% interval") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_prior_r2
+```
+
+## Prior spread of fit across equations
+
+For each prior draw, the standard deviation of the per-equation Bayesian R2 across the N equations: how differently the prior expects the equations to fit.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4.5
+p_prior_spread <- r2_summary %>%
+  filter(mode == "prior", measure == "R2B_eq_sd") %>%
+  avg_reps() %>%
+  ggplot(aes(N, med, colour = model_lab, fill = model_lab)) +
+  geom_ribbon(aes(ymin = q05, ymax = q95), alpha = 0.12, colour = NA) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ p_lab, nrow = 1) +
+  scale_x_continuous(breaks = N_grid) +
+  expand_limits(y = 0) +
+  labs(x = "Number of variables N",
+       y = expression("SD of per-equation Bayesian " * R^2 * " (prior)"),
+       colour = NULL, fill = NULL,
+       title = "Prior spread of fit across equations by number of variables",
+       subtitle = "Median and 90% band, averaged over replicates") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_prior_spread
+```
+
+## Posterior Bayesian R2 as variables are added
+
+Posterior medians with 90% bands; the dashed line is the true Bayesian R2 of each subset.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 4.5
+p_post_r2 <- r2_summary %>%
+  filter(mode == "fit", measure == "R2B_trace") %>%
+  avg_reps() %>%
+  ggplot(aes(N, med, colour = model_lab, fill = model_lab)) +
+  geom_line(data = r2_truth, aes(N, r2_true), inherit.aes = FALSE,
+            linetype = "dashed", colour = "grey20") +
+  geom_ribbon(aes(ymin = q05, ymax = q95), alpha = 0.12, colour = NA) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ p_lab, nrow = 1) +
+  scale_x_continuous(breaks = N_grid) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Number of variables N",
+       y = expression("Posterior Bayesian " * R[trace]^2),
+       colour = NULL, fill = NULL,
+       title = "Posterior Bayesian R-squared by number of variables",
+       subtitle = "Median and 90% band, averaged over replicates; dashed: true Bayesian R2") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_post_r2
+```
+
+## Hyperparameter posteriors
+
+Minnesota's overall tightness lambda, cross-variable tightness theta and lag decay, and ARR2's R2, by N. Lag decay is not identified at p = 1 (only lag 1 is fitted), so its p = 1 posterior is its prior.
+
+```{r}
+#| fig-width: 10
+#| fig-height: 7
+param_labels <- c(
+  "minnesota.lambda"    = "Minnesota: lambda",
+  "minnesota.theta"     = "Minnesota: theta",
+  "minnesota.lag_decay" = "Minnesota: lag decay",
+  "arr2_flat.R2"        = "ARR2 flat: R2",
+  "arr2_minn.R2"        = "ARR2 Minn.: R2"
+)
+
+p_hyper <- hyper_summary %>%
+  filter(mode == "fit") %>%
+  avg_reps(param) %>%
+  mutate(param_lab = factor(param_labels[paste(model, param, sep = ".")],
+                            levels = param_labels)) %>%
+  ggplot(aes(N, med, colour = p_lab)) +
+  geom_pointrange(aes(ymin = q05, ymax = q95),
+                  position = position_dodge(width = 0.8), size = 0.25) +
+  facet_wrap(~ param_lab, scales = "free_y") +
+  scale_x_continuous(breaks = N_grid) +
+  labs(x = "Number of variables N", y = "Posterior (median and 90% interval)",
+       colour = NULL,
+       title = "Hyperparameter posteriors by number of variables",
+       subtitle = "Averaged over replicates") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_hyper
+```
+
+## Coefficient RMSE against the truth
+
+RMSE of posterior-mean coefficients on the standardized scale, averaged over replicates, split into:
+
+-   **Within-block, true nonzero:** lags 1-2 inside each 2-variable block.
+-   **True zero:** every other fitted coefficient, i.e. all cross-block coefficients and, for p = 4, lags 3-4.
+
+At p = 1 the lag-2 coefficients are not fitted; they count as estimated zero in the nonzero set.
+
+```{r}
+true_A_std <- truth_tbl %>% distinct(rep, N, p, .keep_all = TRUE) %>% select(rep, N, p, t)
+
+coef_err <- coef_summary %>%
+  filter(mode == "fit") %>%
+  nest(coefs = c(lag, row, col, est)) %>%
+  left_join(true_A_std, by = c("rep", "N", "p")) %>%
+  mutate(err = pmap(list(coefs, t, p, N), function(coefs, t, p, N) {
+    A      <- t$A
+    p_true <- length(A)
+    expand_grid(lag = seq_len(max(p, p_true)), row = seq_len(N), col = seq_len(N)) %>%
+      mutate(truth = pmap_dbl(list(lag, row, col), function(l, i, j)
+        if (l <= p_true) A[[l]][i, j] else 0)) %>%
+      left_join(coefs, by = c("lag", "row", "col")) %>%
+      mutate(est = replace_na(est, 0))
+  })) %>%
+  select(rep, N, p, model, err) %>%
+  unnest(err)
+
+set_levels <- c("Within-block, true nonzero", "True zero")
+
+rmse_tbl <- bind_rows(
+  coef_err %>% filter(truth != 0)           %>% mutate(set = set_levels[1]),
+  coef_err %>% filter(truth == 0, lag <= p) %>% mutate(set = set_levels[2])
+) %>%
+  group_by(rep, N, p, model, set) %>%
+  summarise(rmse = sqrt(mean((est - truth)^2)), .groups = "drop") %>%
+  group_by(N, p, model, set) %>%
+  summarise(rmse = mean(rmse), .groups = "drop") %>%
+  mutate(set = factor(set, levels = set_levels),
+         model_lab = label_model(model), p_lab = label_p(p))
+
+rmse_tbl %>%
+  pivot_wider(id_cols = c(set, p, N), names_from = model, values_from = rmse) %>%
+  arrange(set, p, N) %>%
+  mutate(across(where(is.numeric) & !c(p, N), ~ round(.x, 3))) %>%
+  print(n = Inf)
+```
+
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+p_rmse <- rmse_tbl %>%
+  ggplot(aes(N, rmse, colour = model_lab)) +
+  geom_line() +
+  geom_point() +
+  facet_grid(set ~ p_lab, scales = "free_y") +
+  scale_x_continuous(breaks = N_grid) +
+  expand_limits(y = 0) +
+  labs(x = "Number of variables N", y = "RMSE of posterior-mean coefficients",
+       colour = NULL,
+       title = "Coefficient RMSE against the truth by number of variables",
+       subtitle = "Standardized scale, averaged over replicates") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+p_rmse
+```
+
+## Save figures
+
+```{r}
+ggsave(file.path(fig_dir, "var_prior_r2_by_N.png"),     p_prior_r2,     width = 10, height = 4.5, dpi = 150)
+ggsave(file.path(fig_dir, "var_prior_spread_by_N.png"), p_prior_spread, width = 10, height = 4.5, dpi = 150)
+ggsave(file.path(fig_dir, "var_post_r2_by_N.png"),      p_post_r2,      width = 10, height = 4.5, dpi = 150)
+ggsave(file.path(fig_dir, "var_hyper_by_N.png"),        p_hyper,        width = 10, height = 7,   dpi = 150)
+ggsave(file.path(fig_dir, "var_coef_rmse_by_N.png"),    p_rmse,         width = 10, height = 6,   dpi = 150)
+```

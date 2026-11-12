@@ -147,6 +147,68 @@ dgp_summary <- function(dgps) {
   }))
 }
 
+# ---- Block DGP (var-sweep-03) -------------------------------------------------
+
+# An 8-variable VAR(2) made of four independent 2-variable blocks. Block k is the
+# baseline VAR(2) with both lag matrices scaled so its population R2_trace equals
+# block_r2[k]; Sigma is block-diagonal with the baseline Sigma in each block. Because
+# there are no links between blocks, the first N = 2, 4, 6 or 8 series form a VAR(2)
+# whose true A and Sigma are the top-left N x N corners of the full ones
+# (see dgp_subset()).
+make_dgp_blocks <- function(spec = dgp_baseline_spec,
+                            block_r2 = c(0.30, 0.60, 0.15, 0.45)) {
+  A_base <- list(spec$A1, spec$A2)
+  Sb     <- spec$Sigma
+  nb     <- nrow(Sb)
+  K      <- length(block_r2)
+  N      <- nb * K
+  mu_b   <- solve(diag(nb) - spec$A1 - spec$A2, spec$c_vec)
+
+  blocks <- lapply(block_r2, function(r2) dgp_scale_to_r2(A_base, Sb, r2))
+
+  bdiag_list <- function(mats) {
+    out <- matrix(0, N, N)
+    for (k in seq_along(mats)) {
+      idx <- (k - 1) * nb + seq_len(nb)
+      out[idx, idx] <- mats[[k]]
+    }
+    out
+  }
+  A     <- lapply(1:2, function(i) bdiag_list(lapply(blocks, `[[`, i)))
+  Sigma <- bdiag_list(rep(list(Sb), K))
+  mu    <- rep(mu_b, K)
+  r2    <- dgp_r2(A, Sigma)
+
+  list(
+    name            = "block8",
+    description     = sprintf("%d independent baseline VAR(2) blocks, block R2_trace %s",
+                              K, paste(block_r2, collapse = ", ")),
+    A               = A,
+    p               = 2,
+    Sigma           = Sigma,
+    mu              = mu,
+    c_vec           = as.vector((diag(N) - A[[1]] - A[[2]]) %*% mu),
+    block           = rep(seq_len(K), each = nb),   # block of each series
+    block_r2        = block_r2,
+    block_scale     = vapply(blocks, attr, numeric(1), "scale"),
+    scale           = NA_real_,
+    spectral_radius = dgp_spectral_radius(A),
+    R2_eq           = r2$R2_eq,
+    R2_mean         = r2$R2_mean,
+    R2_trace        = r2$R2_trace
+  )
+}
+
+# The VAR formed by the first N series of a block DGP (N a multiple of the block size).
+dgp_subset <- function(dgp, N) {
+  idx <- seq_len(N)
+  # whole blocks only: series N and N + 1 must lie in different blocks
+  stopifnot(N <= length(dgp$block),
+            N == length(dgp$block) || dgp$block[N] != dgp$block[N + 1])
+  list(A = lapply(dgp$A, function(Ai) Ai[idx, idx, drop = FALSE]),
+       Sigma = dgp$Sigma[idx, idx, drop = FALSE])
+}
+
 # ---- Simulation --------------------------------------------------------------
 
 # Simulate T_obs observations after a burn-in, which removes the effect of starting at mu.
