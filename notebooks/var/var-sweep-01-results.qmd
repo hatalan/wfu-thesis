@@ -32,7 +32,7 @@ res   <- map(files, readRDS)
 
 model_labels <- c(
   normal    = sprintf("Normal (sd = %g)", s$normal$A_sd),
-  minnesota = sprintf("Minnesota (lambda = %g)", s$minnesota$lambda),
+  minnesota = sprintf("Minnesota (lambda ~ Gamma, mode %g)", s$minnesota$lambda_mode),
   arr2_flat = sprintf("ARR2 flat (R2 mean = %.2g)", s$arr2_flat$mean_R2),
   arr2_minn = sprintf("ARR2 Minn. (R2 mean = %.2g)", s$arr2_minn$mean_R2)
 )

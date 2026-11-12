@@ -37,7 +37,8 @@ settings <- list(
 
   sigma_sd  = 1,
   normal    = list(A_sd = 1),
-  minnesota = list(lambda = 0.2, theta = 0.5, lag_decay = 2,
+  # lambda ~ Gamma with mode 0.2 and sd 0.4 (Giannone, Lenza & Primiceri 2015)
+  minnesota = list(lambda_mode = 0.2, lambda_sd = 0.4, theta = 0.5, lag_decay = 2,
                    delta_own = 0, s_ar_order = 4),
   # both run var-arr2.stan; they differ only in the Dirichlet concentrations
   arr2_flat = list(mean_R2 = 1/3, prec_R2 = 3, xi_split = c(1, 1),
@@ -56,6 +57,12 @@ dgp <- list(
 )
 
 ### Helper functions
+
+# Gamma shape and rate from a mode and standard deviation (mode > 0)
+gamma_mode_sd <- function(mode, sd) {
+  s <- (mode + sqrt(mode^2 + 4 * sd^2)) / (2 * sd)   # sqrt(shape)
+  c(shape = s^2, rate = s / sd)
+}
 
 # Create grid from settings list
 make_grid <- function() {
@@ -159,7 +166,9 @@ run_task <- function(id) {
     Y_tr <- d$Y[seq_len(T_train), , drop = FALSE]
     s <- apply(Y_tr, 2, function(y)
       sqrt(arima(y, order = c(mn$s_ar_order, 0, 0))$sigma2))
-    stan_data <- c(stan_data, list(lambda = mn$lambda, theta = mn$theta,
+    lam <- gamma_mode_sd(mn$lambda_mode, mn$lambda_sd)
+    stan_data <- c(stan_data, list(lambda_shape = lam[["shape"]],
+                                   lambda_rate  = lam[["rate"]], theta = mn$theta,
                                    lag_decay = mn$lag_decay,
                                    delta = rep(mn$delta_own, N), s = s))
 
@@ -185,7 +194,7 @@ run_task <- function(id) {
     show_exceptions = FALSE
   )
 
-  vars <- intersect(c("alpha", "A", "sigma", "Rho", "R2", "w",
+  vars <- intersect(c("alpha", "A", "sigma", "Rho", "R2", "w", "lambda",
                       "stable", "R2_eq", "R2_mean", "R2_trace",
                       "R2B_eq", "R2B_mean", "R2B_trace"),
                     fit$metadata()$stan_variables)

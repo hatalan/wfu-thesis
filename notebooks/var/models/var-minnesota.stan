@@ -64,7 +64,8 @@ data {
   int<lower=1> N;                    // number of variables
   matrix[T, N] Y;
   int<lower=1> p;                    // VAR order
-  real<lower=0> lambda;              // overall tightness
+  real<lower=0> lambda_shape;        // Gamma hyperprior on the overall tightness lambda
+  real<lower=0> lambda_rate;
   real<lower=0> theta;               // cross-variable relative tightness
   real<lower=0> lag_decay;           // prior sd shrinks as 1 / i^lag_decay
   vector[N] delta;                   // prior mean of own first lag (1 = random walk, 0 = white noise)
@@ -74,8 +75,9 @@ data {
 }
 
 transformed data {
+  // Prior sd of A[i][n, g] is lambda * A_scale[i][n, g]; lambda is estimated.
   array[p] matrix[N, N] A_mean;
-  array[p] matrix[N, N] A_sd;
+  array[p] matrix[N, N] A_scale;
   for (i in 1:p) {
     A_mean[i] = rep_matrix(0, N, N);
     for (n in 1:N) {
@@ -83,9 +85,9 @@ transformed data {
         A_mean[i][n, n] = delta[n];
       for (g in 1:N) {
         if (n == g)
-          A_sd[i][n, g] = lambda / i^lag_decay;
+          A_scale[i][n, g] = 1 / i^lag_decay;
         else
-          A_sd[i][n, g] = lambda * theta * s[n] / (i^lag_decay * s[g]);
+          A_scale[i][n, g] = theta * s[n] / (i^lag_decay * s[g]);
       }
     }
   }
@@ -93,16 +95,24 @@ transformed data {
 
 parameters {
   vector[N] alpha;                   // intercept
-  array[p] matrix[N, N] A;
+  real<lower=0> lambda;              // overall tightness (hierarchical, as in Giannone, Lenza & Primiceri 2015)
+  array[p] matrix[N, N] A_z;         // non-centered coefficients
   vector<lower=0>[N] sigma;
   corr_matrix[N] Rho;
+}
+
+transformed parameters {
+  array[p] matrix[N, N] A;
+  for (i in 1:p)
+    A[i] = A_mean[i] + lambda * A_scale[i] .* A_z[i];
 }
 
 model {
   // priors
   target += normal_lpdf(alpha | 0, 1);
+  target += gamma_lpdf(lambda | lambda_shape, lambda_rate);
   for (i in 1:p)
-    target += normal_lpdf(to_vector(A[i]) | to_vector(A_mean[i]), to_vector(A_sd[i]));
+    target += std_normal_lpdf(to_vector(A_z[i]));
   target += normal_lpdf(sigma | 0, sigma_sd);
   target += lkj_corr_lpdf(Rho | 2);
 
