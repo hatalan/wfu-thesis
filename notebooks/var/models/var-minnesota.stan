@@ -40,6 +40,23 @@ functions {
     }
     return G[1:N, 1:N];
   }
+
+  // ---- Bayesian R2 helper (shared by var-normal, var-minnesota, var-arr2) ----
+
+  // Sample variance, per equation, of the fitted values A_1 y_{t-1} + ... + A_p y_{t-p}
+  // over the likelihood rows (p+1):T. The intercept is constant, so it drops out.
+  vector var_fit_variance(matrix Y, array[] matrix A) {
+    int T = rows(Y);
+    int N = cols(Y);
+    int p = size(A);
+    matrix[T - p, N] fit = rep_matrix(0, T - p, N);
+    for (i in 1:p)
+      fit += Y[(p + 1 - i):(T - i)] * A[i]';
+    vector[N] v;
+    for (n in 1:N)
+      v[n] = variance(col(fit, n));
+    return v;
+  }
 }
 
 data {
@@ -123,5 +140,20 @@ generated quantities {
       R2_mean  = not_a_number();
       R2_trace = not_a_number();
     }
+  }
+
+  // Bayesian R2 (Gelman, Goodrich, Gabry & Vehtari 2019, model-based residual
+  // variance): fitted values on the observed lags, so it is defined for every draw,
+  // stationary or not. The trace version is the quantity the ARR2 trace prior
+  // targets in expectation over the coefficients.
+  vector[N] R2B_eq;    // per equation: Var(fit_n) / (Var(fit_n) + sigma_n^2)
+  real R2B_mean;       // equal-weight mean of R2B_eq
+  real R2B_trace;      // sum_n Var(fit_n) / (sum_n Var(fit_n) + tr(Sigma))
+  {
+    vector[N] v  = var_fit_variance(Y, A);
+    vector[N] s2 = square(sigma);
+    R2B_eq    = v ./ (v + s2);
+    R2B_mean  = mean(R2B_eq);
+    R2B_trace = sum(v) / (sum(v) + sum(s2));
   }
 }

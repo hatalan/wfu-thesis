@@ -183,7 +183,8 @@ run_task <- function(id) {
   )
 
   vars <- intersect(c("alpha", "A", "sigma", "Rho", "R2", "w",
-                      "stable", "R2_eq", "R2_mean", "R2_trace"),
+                      "stable", "R2_eq", "R2_mean", "R2_trace",
+                      "R2B_eq", "R2B_mean", "R2B_trace"),
                     fit$metadata()$stan_variables)
 
   res <- list(
