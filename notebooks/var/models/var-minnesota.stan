@@ -66,8 +66,10 @@ data {
   int<lower=1> p;                    // VAR order
   real<lower=0> lambda_shape;        // Gamma hyperprior on the overall tightness lambda
   real<lower=0> lambda_rate;
-  real<lower=0> theta;               // cross-variable relative tightness
-  real<lower=0> lag_decay;           // prior sd shrinks as 1 / i^lag_decay
+  real<lower=0> theta_a;             // Beta hyperprior on the cross-variable tightness theta
+  real<lower=0> theta_b;
+  real<lower=0> lag_decay_shape;     // Gamma hyperprior on the lag decay (prior sd shrinks as 1 / i^lag_decay)
+  real<lower=0> lag_decay_rate;
   vector[N] delta;                   // prior mean of own first lag (1 = random walk, 0 = white noise)
   vector<lower=0>[N] s;              // plug-in scale per series (e.g. univariate AR residual sd)
   real<lower=0> sigma_sd;            // sd of sigma prior
@@ -75,42 +77,45 @@ data {
 }
 
 transformed data {
-  // Prior sd of A[i][n, g] is lambda * A_scale[i][n, g]; lambda is estimated.
   array[p] matrix[N, N] A_mean;
-  array[p] matrix[N, N] A_scale;
   for (i in 1:p) {
     A_mean[i] = rep_matrix(0, N, N);
-    for (n in 1:N) {
-      if (i == 1)
+    if (i == 1)
+      for (n in 1:N)
         A_mean[i][n, n] = delta[n];
-      for (g in 1:N) {
-        if (n == g)
-          A_scale[i][n, g] = 1 / i^lag_decay;
-        else
-          A_scale[i][n, g] = theta * s[n] / (i^lag_decay * s[g]);
-      }
-    }
   }
 }
 
 parameters {
   vector[N] alpha;                   // intercept
   real<lower=0> lambda;              // overall tightness (hierarchical, as in Giannone, Lenza & Primiceri 2015)
+  real<lower=0, upper=1> theta;      // cross-variable relative tightness
+  real<lower=0> lag_decay;           // lag decay exponent
   array[p] matrix[N, N] A_z;         // non-centered coefficients
   vector<lower=0>[N] sigma;
   corr_matrix[N] Rho;
 }
 
 transformed parameters {
+  // Prior sd of A[i][n, g] is lambda / i^lag_decay on own lags and
+  // lambda * theta * s[n] / (i^lag_decay * s[g]) on cross lags; all three are estimated.
   array[p] matrix[N, N] A;
-  for (i in 1:p)
-    A[i] = A_mean[i] + lambda * A_scale[i] .* A_z[i];
+  for (i in 1:p) {
+    real decay = pow(i, -lag_decay);
+    matrix[N, N] A_scale;
+    for (n in 1:N)
+      for (g in 1:N)
+        A_scale[n, g] = n == g ? decay : theta * decay * s[n] / s[g];
+    A[i] = A_mean[i] + lambda * A_scale .* A_z[i];
+  }
 }
 
 model {
   // priors
   target += normal_lpdf(alpha | 0, 1);
   target += gamma_lpdf(lambda | lambda_shape, lambda_rate);
+  target += beta_lpdf(theta | theta_a, theta_b);
+  target += gamma_lpdf(lag_decay | lag_decay_shape, lag_decay_rate);
   for (i in 1:p)
     target += std_normal_lpdf(to_vector(A_z[i]));
   target += normal_lpdf(sigma | 0, sigma_sd);
