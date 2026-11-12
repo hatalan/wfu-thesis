@@ -4,7 +4,9 @@ format: html
 editor: visual
 ---
 
-Results of VAR lag sweep 02 (`slurm/var-sweep-02.R`). Each prior was fit at p = 1..12 to data from four DGPs (`var-dgp.R`): the baseline VAR(2), a long-decay VAR(6), a sparse VAR with lags 1 and 4, and a near-unit-root VAR(2). All fits use the likelihood, so every R2 here is the posterior R2, conditional on the data. Run the sweep on the cluster first; this notebook only reads `results/var-sweep-02/`.
+Results of VAR lag sweep 02 (`slurm/var-sweep-02.R`). Each prior was fit at p = 1..12 to data from four DGPs (`var-dgp.R`): the baseline VAR(2), a long-decay VAR(6), a sparse VAR with lags 1 and 4, and a near-unit-root VAR(2). All fits use the likelihood, so every R2 here is the posterior R2, conditional on the data. Run the sweep on the cluster first; this notebook reads `results/var-sweep-02/` and the simulated data in `simdata/var-sweep-02/`.
+
+R2 throughout is the Bayesian R2 (Gelman, Goodrich, Gabry & Vehtari 2019, model-based residual variance): `R2B_eq[k]`, `R2B_mean` and `R2B_trace` from the Stan models, which use the fitted values on the observed lags. This is the quantity the ARR2 prior targets. It is defined for every draw, stationary or not, so the summaries use all draws. The true value is the Bayesian R2 of the true coefficients and innovation variances on the same rows of the same data.
 
 All quantities are on the standardized scale the models were fit on. The true values are put on that scale with the same train-window standard deviations D: A_i(std) = D\^-1 A_i D and Sigma(std) = D\^-1 Sigma D\^-1. Per-equation R2 is unaffected by this; the trace R2 is not.
 
@@ -13,12 +15,12 @@ All quantities are on the standardized scale the models were fit on. The true va
 ```{r}
 library(tidyverse)
 library(posterior)
-source("var-dgp.R")      # dgp_r2() for the true R2
+source("var-dgp.R")      # make_dgps() objects in truth.rds
 ```
 
 ## Load results
 
-Each result file is summarised as it is read (R2 quantiles, coefficient posterior means and intervals, diagnostics), so the full draws are never all in memory.
+Each result file is summarised as it is read (R2 quantiles, coefficient posterior means and intervals, diagnostics), so the full draws are never all in memory. `rows_fit` records which rows of the simulated data each fit used.
 
 ```{r}
 sweep_id <- "var-sweep-02"
@@ -38,14 +40,14 @@ summarise_fit <- function(f) {
                                  model = r$cell$model, p = r$cell$p, .before = 1)
   stable <- d$stable == 1
 
-  r2_cols <- c(grep("^R2_eq\\[", names(d), value = TRUE), "R2_mean", "R2_trace")
+  r2_cols <- c(grep("^R2B_eq\\[", names(d), value = TRUE), "R2B_mean", "R2B_trace")
   r2 <- map_dfr(r2_cols, function(m) {
-    x <- d[[m]][stable]
+    x <- d[[m]]
     tibble(measure   = m,
            prop_stat = mean(stable),
-           r2_med    = if (length(x)) median(x) else NA_real_,
-           r2_q05    = if (length(x)) unname(quantile(x, 0.05)) else NA_real_,
-           r2_q95    = if (length(x)) unname(quantile(x, 0.95)) else NA_real_)
+           r2_med    = median(x),
+           r2_q05    = unname(quantile(x, 0.05)),
+           r2_q95    = unname(quantile(x, 0.95)))
   })
 
   A_cols <- grep("^A\\[", names(d), value = TRUE)
@@ -62,7 +64,9 @@ summarise_fit <- function(f) {
                  time_s      = round(r$time, 1))
 
   list(r2 = add_cell(r2), coef = add_cell(coef), diag = add_cell(diag),
-       scale = tibble(dgp = r$cell$dgp, rep = r$cell$rep, scale = list(r$scale)))
+       scale = tibble(dgp = r$cell$dgp, rep = r$cell$rep, scale = list(r$scale)),
+       rows  = tibble(dgp = r$cell$dgp, rep = r$cell$rep, p = r$cell$p,
+                      row_first = r$rows_fit[1], row_last = r$rows_fit[2]))
 }
 
 files <- list.files(res_dir, pattern = "_r\\d{2}_.*_p\\d{2}_fit\\.rds$", full.names = TRUE)
@@ -72,6 +76,7 @@ r2_summary   <- map_dfr(fits, "r2")
 coef_summary <- map_dfr(fits, "coef")
 diag_tbl     <- map_dfr(fits, "diag")
 scales       <- map_dfr(fits, "scale") %>% distinct(dgp, rep, .keep_all = TRUE)
+rows_tbl     <- map_dfr(fits, "rows") %>% distinct(dgp, rep, p, .keep_all = TRUE)
 
 length(files)
 ```
@@ -91,9 +96,9 @@ label_model   <- function(m) factor(model_labels[m], levels = model_labels)
 label_dgp     <- function(g) factor(dgp_labels[g], levels = dgp_labels)
 label_measure <- function(m) {
   lab <- case_when(
-    str_detect(m, "^R2_eq") ~ paste("Equation", str_match(m, "\\[(\\d+)\\]")[, 2]),
-    m == "R2_mean"          ~ "Mean across equations",
-    m == "R2_trace"         ~ "Trace"
+    str_detect(m, "^R2B_eq") ~ paste("Equation", str_match(m, "\\[(\\d+)\\]")[, 2]),
+    m == "R2B_mean"          ~ "Mean across equations",
+    m == "R2B_trace"         ~ "Trace"
   )
   fct_relevel(factor(lab), "Mean across equations", "Trace", after = Inf)
 }
@@ -115,13 +120,36 @@ std_dgp <- function(g, sc) {
 truth_std <- scales %>%
   mutate(std = map2(dgp, scale, std_dgp))
 
-r2_truth <- truth_std %>%
-  mutate(r2 = map(std, function(t) {
-    v <- dgp_r2(t$A, t$Sigma)
-    tibble(measure = c(sprintf("R2_eq[%d]", seq_along(v$R2_eq)), "R2_mean", "R2_trace"),
-           r2_true = c(v$R2_eq, v$R2_mean, v$R2_trace))
-  })) %>%
-  select(dgp, rep, r2) %>%
+# Simulated data on the standardized scale, as in prep_data() in slurm/var-sweep-02.R
+sim_std <- function(g, r) {
+  Y    <- as.matrix(read.csv(file.path("simdata", sweep_id, sprintf("%s_r%02d.csv", g, r)),
+                             header = FALSE))
+  Y_tr <- Y[seq_len(s$T_train), , drop = FALSE]
+  sweep(sweep(Y, 2, colMeans(Y_tr)), 2, apply(Y_tr, 2, sd), "/")
+}
+
+# Bayesian R2 of the true (A, Sigma) on the likelihood rows of a fit: rows
+# (row_first + p):row_last of the data, where the fit used rows row_first..row_last.
+# The true lags can reach before row_first; with common_sample = TRUE they stay
+# inside the data.
+true_bayes_r2 <- function(A, Sigma, Y, rows) {
+  stopifnot(min(rows) > length(A))
+  fit <- Reduce(`+`, imap(A, function(Ai, i) Y[rows - i, , drop = FALSE] %*% t(Ai)))
+  v   <- apply(fit, 2, var)
+  s2  <- diag(Sigma)
+  r2_eq <- v / (v + s2)
+  tibble(measure = c(sprintf("R2B_eq[%d]", seq_along(v)), "R2B_mean", "R2B_trace"),
+         r2_true = c(r2_eq, mean(r2_eq), sum(v) / (sum(v) + sum(s2))))
+}
+
+r2_truth <- rows_tbl %>%
+  left_join(select(truth_std, dgp, rep, std), by = c("dgp", "rep")) %>%
+  group_by(dgp, rep) %>%
+  mutate(Y = list(sim_std(first(dgp), first(rep)))) %>%
+  ungroup() %>%
+  mutate(r2 = pmap(list(std, Y, row_first, row_last, p), function(t, Y, a, b, p)
+    true_bayes_r2(t$A, t$Sigma, Y, (a + p):b))) %>%
+  select(dgp, rep, p, r2) %>%
   unnest(r2)
 
 coef_truth <- truth_std %>%
@@ -131,7 +159,7 @@ coef_truth <- truth_std %>%
 
 ## Sampler diagnostics
 
-Cells with divergences, R-hat above 1.01, or a meaningful share of non-stationary posterior draws (R2 below is summarised over stationary draws only).
+Cells with divergences, R-hat above 1.01, or a meaningful share of non-stationary posterior draws. The Bayesian R2 below uses all draws, so non-stationary draws are included in it.
 
 ```{r}
 diag_tbl %>%
@@ -142,7 +170,7 @@ diag_tbl %>%
 
 ## Posterior R2 by lag order and DGP
 
-Solid curves are posterior medians with 90% bands; the dashed line is the DGP's true R2 and the dotted vertical line its true lag order. Shown for the first replicate.
+Solid curves are posterior medians with 90% bands; the dashed line is the true Bayesian R2 on the same rows (constant in p when `common_sample = TRUE`) and the dotted vertical line the true lag order. Shown for the first replicate.
 
 ```{r}
 #| fig-width: 10
@@ -157,12 +185,13 @@ r2_truth_df <- r2_truth %>%
   mutate(dgp_lab = label_dgp(dgp), measure_lab = label_measure(measure))
 
 p_r2_mean <- r2_plot_df %>%
-  filter(measure == "R2_mean") %>%
+  filter(measure == "R2B_mean") %>%
   ggplot(aes(p, r2_med, colour = model_lab, fill = model_lab)) +
   geom_vline(data = dgp_p_true, aes(xintercept = p_true),
              linetype = "dotted", colour = "grey50") +
-  geom_hline(data = filter(r2_truth_df, measure == "R2_mean"),
-             aes(yintercept = r2_true), linetype = "dashed", colour = "grey20") +
+  geom_line(data = filter(r2_truth_df, measure == "R2B_mean"),
+            aes(p, r2_true), inherit.aes = FALSE,
+            linetype = "dashed", colour = "grey20") +
   geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.12, colour = NA) +
   geom_line() +
   geom_point(size = 1.2) +
@@ -170,10 +199,10 @@ p_r2_mean <- r2_plot_df %>%
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Posterior mean " * R^2 * " (stationary draws)"),
+       y = expression("Posterior mean Bayesian " * R^2),
        colour = NULL, fill = NULL,
-       title = "Posterior mean R-squared by lag order and DGP",
-       subtitle = "Median and 90% band; dashed: true R2; dotted: true lag order") +
+       title = "Posterior mean Bayesian R-squared by lag order and DGP",
+       subtitle = "Median and 90% band; dashed: true Bayesian R2; dotted: true lag order") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
@@ -189,8 +218,8 @@ p_r2_measures <- r2_plot_df %>%
   ggplot(aes(p, r2_med, colour = model_lab, fill = model_lab)) +
   geom_vline(data = dgp_p_true, aes(xintercept = p_true),
              linetype = "dotted", colour = "grey50") +
-  geom_hline(data = r2_truth_df, aes(yintercept = r2_true),
-             linetype = "dashed", colour = "grey20") +
+  geom_line(data = r2_truth_df, aes(p, r2_true), inherit.aes = FALSE,
+            linetype = "dashed", colour = "grey20") +
   geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.12, colour = NA) +
   geom_line() +
   geom_point(size = 1) +
@@ -198,10 +227,10 @@ p_r2_measures <- r2_plot_df %>%
   scale_x_continuous(breaks = seq(min(p_grid), max(p_grid), by = 2)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Posterior " * R^2 * " (stationary draws)"),
+       y = expression("Posterior Bayesian " * R^2),
        colour = NULL, fill = NULL,
-       title = "Posterior R-squared by lag order, DGP and R2 variant",
-       subtitle = "Median and 90% band; dashed: true R2; dotted: true lag order") +
+       title = "Posterior Bayesian R-squared by lag order, DGP and R2 variant",
+       subtitle = "Median and 90% band; dashed: true Bayesian R2; dotted: true lag order") +
   theme_minimal() +
   theme(legend.position = "bottom")
 

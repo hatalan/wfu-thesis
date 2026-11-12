@@ -64,24 +64,24 @@ diag_tbl %>%
   print(n = Inf)
 ```
 
-## Population R2 draws
+## Bayesian R2 draws
 
-`R2_eq[k]`, `R2_mean` and `R2_trace` are the generated quantities from the Stan models. They are NaN for non-stationary draws, so every R2 summary below is over stationary draws only, and stationarity is reported separately.
+`R2B_eq[k]`, `R2B_mean` and `R2B_trace` are the Bayesian R2 generated quantities from the Stan models (Gelman, Goodrich, Gabry & Vehtari 2019, model-based residual variance). They use the fitted values on the observed lags, so they are defined for every draw, stationary or not, and every R2 summary below uses all draws. In prior-only runs they condition on the observed design. Stationarity is reported separately.
 
 ```{r}
 r2_draws <- map_dfr(res, function(r) {
   draws_tbl(r$draws) %>%
-    select(.draw, stable, starts_with("R2_eq"), R2_mean, R2_trace) %>%
+    select(.draw, stable, starts_with("R2B_eq"), R2B_mean, R2B_trace) %>%
     mutate(model = r$cell$model, p = r$cell$p, mode = r$cell$mode)
 }) %>%
-  pivot_longer(c(starts_with("R2_eq"), R2_mean, R2_trace),
+  pivot_longer(c(starts_with("R2B_eq"), R2B_mean, R2B_trace),
                names_to = "measure", values_to = "r2") %>%
   mutate(
     stable = stable == 1,
     measure_lab = case_when(
-      str_detect(measure, "R2_eq") ~ paste("Equation", str_match(measure, "\\[(\\d+)\\]")[, 2]),
-      measure == "R2_mean"         ~ "Mean across equations",
-      measure == "R2_trace"        ~ "Trace"
+      str_detect(measure, "R2B_eq") ~ paste("Equation", str_match(measure, "\\[(\\d+)\\]")[, 2]),
+      measure == "R2B_mean"         ~ "Mean across equations",
+      measure == "R2B_trace"        ~ "Trace"
     ),
     measure_lab = fct_relevel(factor(measure_lab), "Mean across equations", "Trace",
                               after = Inf),
@@ -94,23 +94,23 @@ r2_summary <- r2_draws %>%
     n_draws   = n(),
     prop_stat = mean(stable),
     mcse      = sqrt(prop_stat * (1 - prop_stat) / n_draws),
-    r2_med    = if (any(stable)) median(r2[stable]) else NA_real_,
-    r2_q05    = if (any(stable)) unname(quantile(r2[stable], 0.05)) else NA_real_,
-    r2_q95    = if (any(stable)) unname(quantile(r2[stable], 0.95)) else NA_real_,
+    r2_med    = median(r2),
+    r2_q05    = unname(quantile(r2, 0.05)),
+    r2_q95    = unname(quantile(r2, 0.95)),
     .groups   = "drop"
   )
 ```
 
 ## Prior-implied R2 by lag order
 
-The dashed line is the median of the ARR2 beta prior on R2 and the dotted lines its 90% interval. If ARR2 controls fit as intended, its curves should stay near that band as p grows, while the normal and Minnesota curves drift.
+The dashed line is the median of the ARR2 beta prior on R2 and the dotted lines its 90% interval. ARR2 targets the trace Bayesian R2 as a ratio of expectations over the coefficients, so its curves should stay roughly constant as p grows while the normal and Minnesota curves drift. The per-draw Bayesian R2 is concave in the fitted variance, so by Jensen's inequality its distribution sits somewhat below the beta prior; it is not expected to match it exactly.
 
 ```{r}
 arr2_ref <- with(s$arr2_flat,
                  qbeta(c(0.05, 0.5, 0.95), mean_R2 * prec_R2, (1 - mean_R2) * prec_R2))
 
 p_prior_r2 <- r2_summary %>%
-  filter(mode == "prior", measure == "R2_mean") %>%
+  filter(mode == "prior", measure == "R2B_mean") %>%
   ggplot(aes(p, r2_med, colour = model_lab, fill = model_lab)) +
   geom_hline(yintercept = arr2_ref[2], linetype = "dashed", colour = "grey40") +
   geom_hline(yintercept = arr2_ref[c(1, 3)], linetype = "dotted", colour = "grey40") +
@@ -120,9 +120,9 @@ p_prior_r2 <- r2_summary %>%
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Prior-implied mean " * R^2 * " (stationary draws)"),
+       y = expression("Prior-implied mean Bayesian " * R^2),
        colour = NULL, fill = NULL,
-       title = "Prior-implied mean R-squared by lag order",
+       title = "Prior-implied mean Bayesian R-squared by lag order",
        subtitle = "Median and 90% band; grey lines: ARR2 R2 prior median and 90% interval") +
   theme_minimal()
 
@@ -144,9 +144,9 @@ p_prior_r2_measures <- r2_summary %>%
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Prior-implied " * R^2 * " (stationary draws)"),
+       y = expression("Prior-implied Bayesian " * R^2),
        colour = NULL, fill = NULL,
-       title = "Prior-implied R-squared by lag order and R2 variant",
+       title = "Prior-implied Bayesian R-squared by lag order and R2 variant",
        subtitle = "Median and 90% band; dashed line: ARR2 R2 prior median") +
   theme_minimal() +
   theme(legend.position = "bottom")
@@ -158,7 +158,7 @@ p_prior_r2_measures
 
 ```{r}
 p_prior_stat <- r2_summary %>%
-  filter(mode == "prior", measure == "R2_mean") %>%
+  filter(mode == "prior", measure == "R2B_mean") %>%
   ggplot(aes(p, prop_stat, colour = model_lab)) +
   geom_line() +
   geom_pointrange(aes(ymin = prop_stat - 2 * mcse,
