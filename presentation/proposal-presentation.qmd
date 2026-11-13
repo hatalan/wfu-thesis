@@ -1,17 +1,10 @@
 ---
-# HOW TO USE THIS DRAFT
-# - Text in [brackets]{.todo} is a placeholder: replace or delete it.
-# - Bullets are example wording; keep, edit or cut.
-# - "::: notes" blocks are speaker notes (press S in the browser to see them).
-# - Figures point at the paths the notebooks save to. The VAR figures exist only after
-#   rendering the sweep results notebooks (they are not committed), so render those first
-#   or pull them from DEAC.
-# - Render with:  quarto render presentation/proposal-presentation.qmd
-title: "R²-Based Priors for Bayesian Vector Autoregressions"
-subtitle: "Thesis proposal: progress so far"
-author: "Nick Hatala"
+title: "R^2^-based Priors for Bayesian Vector Autoregressions"
+subtitle: "Thesis Proposal"
+author: "Nicholas Hatala (advisor: Dr. Collin Cademartori)"
 institute: "Department of Statistical Sciences, Wake Forest University"
-date: 2026-11-23
+date: "November 17, 2026"
+date-format: "long"
 bibliography: references.bib
 format:
   revealjs:
@@ -28,19 +21,15 @@ format:
     theme: [default, wfu.scss]
 ---
 
-## Roadmap
+## Outline
 
 1. AR and VAR models
-2. What is R² in a time series?
-3. Bayesian VARs and the usual priors
+2. What is R^2^ in a time series?
+3. Bayesian VARs and and common priors
 4. R2D2 and the ARR2 prior
-5. ARR2 in the AR case: what the R² prior actually controls
-6. Extending ARR2 to VARs: simulation results
+5. ARR2 for AR mdoels: what the R² prior actually controls
+6. Extending ARR2 to VARs
 7. Future work
-
-::: notes
-[One sentence on the big picture]{.todo}, e.g.: "Priors in VARs are usually set coefficient by coefficient. I'm studying priors set on the fit of the whole model instead, and checking what they actually control."
-:::
 
 # AR and VAR models {background-color="#9E7E38"}
 
@@ -52,140 +41,97 @@ $$
 y_t = c + \sum_{i=1}^{p} \phi_i\, y_{t-i} + \varepsilon_t, \qquad \varepsilon_t \sim N(0, \sigma^2)
 $$
 
-- Today's value is a linear function of the last $p$ values plus a shock.
-- Stationary when all roots of $1 - \phi_1 z - \dots - \phi_p z^p$ lie outside the unit circle.
-- [Example application: consumer sentiment (UMich index)]{.todo}
-
-::: notes
-Keep this short; the audience knows regression. Emphasise that the regressors are the series' own past, which matters later.
-:::
+- The value of the series at time $t$ is a linear function of the last $p$ values of the series plus a shock, $\varepsilon_t$.
+- The AR process is said to be stationary when the statistical properties (mean, variance, etc.) remain the same across time.
+- This is true when the roots of the  characteristic polynomial, $1 - \phi_1 z - \ldots - \phi_p z^p$, lie outside the unit circle.
+- Time series analysis almost always assumes a stationary series.
 
 ## Vector autoregressions
 
-A VAR($p$) with $N$ series:
+A VAR($p$) for $N$ series:
 
 $$
-y_t = c + \sum_{i=1}^{p} A_i\, y_{t-i} + u_t, \qquad u_t \sim N(0, \Sigma)
+\mathbf{y}_t = \mathbf{c} + \sum_{i=1}^{p} \mathbf{A}_i\, \mathbf{y}_{t-i} + \mathbf{u}_t, \qquad \mathbf{u}_t \sim N(\mathbf{0}, \Sigma)
 $$
 
-- Each $A_i$ is $N \times N$: every series depends on the past of every series.
-- $N^2 p$ coefficients: $N = 8$, $p = 4$ already gives 256.
-- Used for forecasting, impulse responses and variance decompositions in macroeconomics.
+- A multivariate extension of an AR(p) process.
+- Each $A_i$ is $N \times N$, so every series depends on the past values of every series.
+- The number of coefficients grows quadratically as $N$ increase (there are $N^2 p$ coefficients). With $N = 8$ and $p = 4$, we already have 256 coefficients.
+- Time series (in macroeconomics, social science data) often have low series length, so shrinkage is necessary for stable coefficient estimates.
 
-::: notes
-The coefficient count is the motivation for shrinkage. [Optional: mention an applied VAR with sentiment, unemployment, inflation.]{.todo}
-:::
+# What is R^2^ in a time series? {background-color="#9E7E38"}
 
-# What is R² in a time series? {background-color="#9E7E38"}
+## Population R^2^
 
-## Two notions of R²
+Consider a known stationary $AR(p)$ process, we have a population R^2^. From Yule-Walker, we have 
 
-**Population R²** (a property of the parameters): for equation $k$,
+$$\gamma_0 = \sum^p_{i=1} \phi_i\gamma_i + \sigma^2,$$
 
-$$
-R^2_k = 1 - \frac{\Sigma_{kk}}{\Gamma_{0,kk}}, \qquad \Gamma = F\,\Gamma F' + Q \;\; \text{(Lyapunov / multivariate Yule--Walker)}
-$$
+where $\gamma_i$ is the $i$th autocovariance and $\gamma_0$ is derived process variance. Dividing by $\gamma_0$ and rearranging gives
 
-- Requires a stationary model; $\Gamma_0$ is the model's own variance.
+\begin{align*}
+  R^2_{\text{pop}} &= 1 - \frac{\sigma^2}{\gamma_0} \\
+  &= \sum^p_{i=1}\phi_i\rho_i.
+\end{align*}
 
-**Bayesian R²** [@gelman2019r2] (fit on the observed data, per posterior draw):
+So, given the coefficient of an AR(p) process, we have an implied process R^2^~pop~.
 
-$$
-R^2_{B,k} = \frac{\operatorname{Var}(\hat\mu_{k})}{\operatorname{Var}(\hat\mu_{k}) + \sigma_k^2}, \qquad \hat\mu_{k,t} = \textstyle\sum_i (A_i\, y_{t-i})_k
-$$
+## Bayesian R^2^
 
-- Uses the observed lags; defined for every draw, stationary or not.
-
-::: notes
-Example wording: "Population R² asks how much of the variance this process would explain. Bayesian R² asks how much of the variance of the observed series these parameters explain. They agree when the data pin down the parameters, and they can be very different in the prior."
-:::
-
-## System R²: the trace
+We also have a notion of Bayesian R^2^ [@gelman2019r2], which can be calculated per posterior (or prior) draw:
 
 $$
-R^2_{\text{trace}} = 1 - \frac{\operatorname{tr}\Sigma}{\operatorname{tr}\Gamma_0} = \sum_k w_k R^2_k, \qquad w_k = \frac{\Gamma_{0,kk}}{\operatorname{tr}\Gamma_0}
+R^2_{B} = \frac{\operatorname{Var}(\hat\mu_{t})}{\operatorname{Var}(\hat\mu_{t}) + \sigma_k^2}, \qquad \hat\mu_t = \sum_{i=1}^p \phi_i\, y_{t-i}
 $$
 
-- A variance-weighted average of the per-equation R².
-- On standardized data the weights are (nearly) equal: the plain mean.
-- Same construction for Bayesian R²: $\sum_k v_k / \left(\sum_k v_k + \operatorname{tr}\Sigma\right)$.
-
-![[TODO: save p_r2_sigma from var-2-prior.qmd with ggsave and point this at it]](../notebooks/var/figures/r2_variants_by_sigma.png){fig-align="center" width="80%"}
-
-::: notes
-Example: "The trace version is order-invariant and is what my VAR prior targets. The determinant version would also account for correlated shocks; that is future work."
-:::
+This gives a full distribution for R^2^.
 
 # Bayesian VARs {background-color="#9E7E38"}
 
 ## The usual priors
 
-**Independent normal:** $A_{i,nk} \sim N(0, s^2)$ for every coefficient.
+**Independent Gaussian:** $A_{i,nk} \sim N(0, \sigma^2)$ for every coefficient.
 
-**Minnesota** [@litterman1986], hierarchical as in @giannone2015prior and @chan2021minnesota:
+**Minnesota:** First introduced in the 1980s [@litterman1986] using heuristic plug-ins, and eventually parameterized with hyperpriors as in @giannone2015prior and @chan2021minnesota:
 
 $$
-\operatorname{sd}(A_{i,nn}) = \frac{\lambda}{i^{d}}, \qquad
-\operatorname{sd}(A_{i,ng}) = \frac{\lambda\,\theta}{i^{d}}\,\frac{s_n}{s_g} \quad (g \ne n)
+A_{i,nn}\sim N \left(0, \frac{\lambda}{i^{d}}\right) \qquad
+A_{i,ng}\sim N \left(0, \frac{\lambda\,\theta}{i^{d}}\cdot\frac{s_n}{s_g}\right) \quad (g \ne n)
 $$
 
 - $\lambda$: overall tightness, Gamma prior (mode 0.2, sd 0.4)
 - $\theta$: cross-variable tightness, Beta(2, 2)
 - $d$: lag decay, Gamma prior (mode 1, sd 0.5)
 
-::: notes
-All three Minnesota scales are learned from the data in my comparisons, so it is the strongest version of the standard prior, not a straw man.
-:::
-
-## Priors on coefficients imply priors on fit
-
-- Each coefficient's prior adds signal variance, so the implied fit depends on how many coefficients there are.
-- Under Minnesota, expected signal in equation $n$ is roughly
-
-$$
-s_n^2\,\lambda^2\,\bigl(1 + (N-1)\theta^2\bigr) \sum_{l=1}^{p} l^{-2d}
-$$
-
-  - nearly stable in $p$ (the lag sum converges), but **linear in $N$**.
-- With independent normal priors, implied fit heads to 1 as $N$ or $p$ grows.
-
-::: notes
-Set up the question for the rest of the talk: "What if we put the prior on the fit directly?"
-:::
-
 # R2D2 and ARR2 {background-color="#9E7E38"}
 
-## R2D2: a prior on model fit
+## R2D2: An R^2^ prior on model fit
 
-In regression [@zhang2022r2d2]:
+First parameterized for linear regression [@zhang2022r2d2]:
 
-- Put a Beta prior on $R^2$.
-- Set the global signal-to-noise ratio $\tau^2 = R^2/(1 - R^2)$.
-- Split $\tau^2$ across coefficients with a Dirichlet simplex $\psi$:
+- A Beta prior is set on $R^2$.
+- The ratio $\tau^2 = R^2/(1 - R^2)$ is split across coefficients with a Dirichlet simplex $\psi$:
 
 $$
 \beta_j \sim N\!\left(0,\; \frac{\sigma^2}{s_{x_j}^2}\,\tau^2\,\psi_j\right), \qquad \psi \sim \operatorname{Dir}(\xi)
 $$
 
-- Global-local shrinkage, but the global part is stated in terms of fit.
+- So, a global variance "knob" (R^2^) is allocated across the prior, and total prior explained variance remains consistent as the model expands. @riha2026select uses R2D2 as an example when formalizing this idea.
 
 ## ARR2: R2D2 for autoregressions
 
-@kohns2025arr2 carry the construction to AR models:
+@kohns2025arr2 extends this construction to different classes of AR models:
 
 $$
-\phi_i \sim N\!\left(0,\; \frac{\sigma^2}{\sigma_y^2}\,\tau^2\,\psi_i\right), \quad
+\phi_i \sim N\!\left(0,\; \frac{\sigma^2}{\operatorname{var}(y_t)}\,\tau^2\,\psi_i\right), \quad
 \tau^2 = \frac{R^2}{1 - R^2}, \quad
 R^2 \sim \operatorname{Beta}, \quad
 \psi \sim \operatorname{Dir}(\xi_1, \dots, \xi_p)
 $$
 
-- Concentrations $\xi$ can be flat or Minnesota-like (decaying in the lag).
-- Goal: **predictive consistency**. Adding lags should not change the prior predictive distribution much [@riha2026select].
-
-::: notes
-[One sentence on why predictive consistency matters for practitioners]{.todo}, e.g. "you can fit a big model without worrying about choosing p, because the prior keeps the total fit in check."
-:::
+- Concentrations $\xi$ can be set to induce variance allocation as desired (flat, Minnesota-like, etc.).
+- $\operatorname{var}(y_t)$ is a plug-in variance used to resolve mathematical and computational complexity.
+- The prior assumes the series is stationary, but does not enforce it.
 
 # ARR2 in the AR case {background-color="#9E7E38"}
 
@@ -201,10 +147,6 @@ $$
 
 - The cross terms vanish because the $\phi_i$ are independent with mean zero.
 - So the **target is the marginal Bayesian R²**: a ratio of expectations.
-
-::: notes
-This is the result to land: "The Beta prior is exactly a prior on the marginal Bayesian R², the fit on the observed design averaged over coefficient draws. Any single draw can differ."
-:::
 
 ## Two gaps between R² and the fit you get
 
