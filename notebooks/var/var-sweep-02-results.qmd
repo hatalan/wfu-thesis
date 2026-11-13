@@ -4,12 +4,6 @@ format: html
 editor: visual
 ---
 
-Results of VAR lag sweep 02 (`slurm/var-sweep-02.R`). Each prior was fit at p = 1..12 to data from four DGPs (`var-dgp.R`): the baseline VAR(2), a long-decay VAR(6), a sparse VAR with lags 1 and 4, and a near-unit-root VAR(2). All fits use the likelihood, so every R2 here is the posterior R2, conditional on the data. Run the sweep on the cluster first; this notebook reads `results/var-sweep-02/` and the simulated data in `simdata/var-sweep-02/`.
-
-R2 throughout is the Bayesian R2 (Gelman, Goodrich, Gabry & Vehtari 2019, model-based residual variance): `R2B_eq[k]`, `R2B_mean` and `R2B_trace` from the Stan models, which use the fitted values on the observed lags. This is the quantity the ARR2 prior targets. It is defined for every draw, stationary or not, so the summaries use all draws. The true value is the Bayesian R2 of the true coefficients and innovation variances on the same rows of the same data.
-
-All quantities are on the standardized scale the models were fit on. The true values are put on that scale with the same train-window standard deviations D: A_i(std) = D\^-1 A_i D and Sigma(std) = D\^-1 Sigma D\^-1. Per-equation R2 is unaffected by this; the trace R2 is not.
-
 ## Loading packages
 
 ```{r}
@@ -19,8 +13,6 @@ source("var-dgp.R")      # make_dgps() objects in truth.rds
 ```
 
 ## Load results
-
-Each result file is summarised as it is read (R2 quantiles, coefficient posterior means and intervals, diagnostics), so the full draws are never all in memory. `rows_fit` records which rows of the simulated data each fit used.
 
 ```{r}
 sweep_id <- "var-sweep-02"
@@ -35,7 +27,7 @@ p_grid <- s$p_grid
 
 summarise_fit <- function(f) {
   r <- readRDS(f)
-  d <- as_tibble(as.data.frame(r$draws))           # drop draws_df class
+  d <- as_tibble(as.data.frame(r$draws))
   add_cell <- function(x) mutate(x, dgp = r$cell$dgp, rep = r$cell$rep,
                                  model = r$cell$model, p = r$cell$p, .before = 1)
   stable <- d$stable == 1
@@ -120,7 +112,6 @@ std_dgp <- function(g, sc) {
 truth_std <- scales %>%
   mutate(std = map2(dgp, scale, std_dgp))
 
-# Simulated data on the standardized scale, as in prep_data() in slurm/var-sweep-02.R
 sim_std <- function(g, r) {
   Y    <- as.matrix(read.csv(file.path("simdata", sweep_id, sprintf("%s_r%02d.csv", g, r)),
                              header = FALSE))
@@ -128,10 +119,6 @@ sim_std <- function(g, r) {
   sweep(sweep(Y, 2, colMeans(Y_tr)), 2, apply(Y_tr, 2, sd), "/")
 }
 
-# Bayesian R2 of the true (A, Sigma) on the likelihood rows of a fit: rows
-# (row_first + p):row_last of the data, where the fit used rows row_first..row_last.
-# The true lags can reach before row_first; with common_sample = TRUE they stay
-# inside the data.
 true_bayes_r2 <- function(A, Sigma, Y, rows) {
   stopifnot(min(rows) > length(A))
   fit <- Reduce(`+`, imap(A, function(Ai, i) Y[rows - i, , drop = FALSE] %*% t(Ai)))
@@ -159,8 +146,6 @@ coef_truth <- truth_std %>%
 
 ## Sampler diagnostics
 
-Cells with divergences, R-hat above 1.01, or a meaningful share of non-stationary posterior draws. The Bayesian R2 below uses all draws, so non-stationary draws are included in it.
-
 ```{r}
 diag_tbl %>%
   filter(divergences > 0 | max_rhat > 1.01 | prop_stable < 0.99) %>%
@@ -169,8 +154,6 @@ diag_tbl %>%
 ```
 
 ## Posterior R2 by lag order and DGP
-
-Solid curves are posterior medians with 90% bands; the dashed line is the true Bayesian R2 on the same rows (constant in p when `common_sample = TRUE`) and the dotted vertical line the true lag order. Shown for the first replicate.
 
 ```{r}
 #| fig-width: 10
@@ -208,8 +191,6 @@ p_r2_mean <- r2_plot_df %>%
 
 p_r2_mean
 ```
-
-Same, for each R2 variant.
 
 ```{r}
 #| fig-width: 11

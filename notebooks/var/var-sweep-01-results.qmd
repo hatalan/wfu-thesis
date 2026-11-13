@@ -4,8 +4,6 @@ format: html
 editor: visual
 ---
 
-Results of the VAR lag-misspecification sweep (`slurm/var-sweep-01.R`). Every model was fit to the same simulated VAR(2) at lag orders p = 1..8, with the likelihood (`fit`) and without it (`prior`). Run the sweep on the cluster first; this notebook only reads `results/var-sweep-01/`.
-
 ## Loading packages
 
 ```{r}
@@ -46,8 +44,6 @@ length(res)
 
 ## Sampler diagnostics
 
-Check these before reading the charts: a cell with divergences or high R-hat should not be trusted.
-
 ```{r}
 diag_tbl <- map_dfr(res, function(r) {
   tibble(model       = r$cell$model,
@@ -65,8 +61,6 @@ diag_tbl %>%
 ```
 
 ## Bayesian R2 draws
-
-`R2B_eq[k]`, `R2B_mean` and `R2B_trace` are the Bayesian R2 generated quantities from the Stan models (Gelman, Goodrich, Gabry & Vehtari 2019, model-based residual variance). They use the fitted values on the observed lags, so they are defined for every draw, stationary or not, and every R2 summary below uses all draws. In prior-only runs they condition on the observed design. Stationarity is reported separately.
 
 ```{r}
 r2_draws <- map_dfr(res, function(r) {
@@ -103,8 +97,6 @@ r2_summary <- r2_draws %>%
 
 ## Prior-implied R2 by lag order
 
-The dashed line is the median of the ARR2 beta prior on R2 and the dotted lines its 90% interval. ARR2 targets the trace Bayesian R2 as a ratio of expectations over the coefficients, so its curves should stay roughly constant as p grows while the normal and Minnesota curves drift. The per-draw Bayesian R2 is concave in the fitted variance, so by Jensen's inequality its distribution sits somewhat below the beta prior; it is not expected to match it exactly.
-
 ```{r}
 arr2_ref <- with(s$arr2_flat,
                  qbeta(c(0.05, 0.5, 0.95), mean_R2 * prec_R2, (1 - mean_R2) * prec_R2))
@@ -128,8 +120,6 @@ p_prior_r2 <- r2_summary %>%
 
 p_prior_r2
 ```
-
-Same chart for each R2 variant.
 
 ```{r}
 #| fig-height: 7
@@ -173,12 +163,6 @@ p_prior_stat
 ```
 
 ## Coefficient RMSE against the true VAR(2)
-
-The models were fit to standardized data, so the true lag matrices are put on the same scale: A_i(std) = D\^-1 A_i D, with D = diag(train-window sd). Lags beyond 2 are truly zero, and a model with p = 1 implicitly sets its lag-2 coefficients to zero. RMSE uses the posterior mean of each coefficient (as in Kohns et al.) and is split three ways:
-
--   **All fitted coefficients:** every coefficient the model estimates (lags 1..p).
--   **True lags:** lags 1..2 only, which measures recovery of the real signal.
--   **Redundant lags:** lags 3..p only, which measures how well spurious lags are shrunk to zero (empty for p ≤ 2).
 
 ```{r}
 coef_err <- map_dfr(keep(res, ~ .x$cell$mode == "fit"), function(r) {

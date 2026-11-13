@@ -11,7 +11,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4         # one per chain
 #SBATCH --mem=8G
-#SBATCH --time=04:00:00
+#SBATCH --time=01:00:00
 #SBATCH --mail-user=hatan25@wfu.edu
 #SBATCH --output=slurm/logs/%x_%A_%a.out
 
