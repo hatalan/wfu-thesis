@@ -191,7 +191,7 @@ p_prior_r2 <- prior_r2 %>%
        y = expression("Prior-implied Bayesian " * R[trace]^2),
        colour = NULL, fill = NULL,
        title = "Prior-implied Bayesian R-squared by number of variables",
-       subtitle = "Median and 90% band, averaged over replicates; grey lines: ARR2 R2 prior median and 90% interval") +
+       subtitle = "Median and 90% band; grey lines: ARR2 R2 prior median and 90% interval") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
@@ -219,7 +219,7 @@ p_post_r2 <- r2_summary %>%
        y = expression("Posterior Bayesian " * R[trace]^2),
        colour = NULL, fill = NULL,
        title = "Posterior Bayesian R-squared by number of variables",
-       subtitle = "Median and 90% band, averaged over replicates; dashed: true Bayesian R2") +
+       subtitle = "Median and 90% band; dashed: true Bayesian R2") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
@@ -280,7 +280,7 @@ p_rmse <- rmse_tbl %>%
   labs(x = "Number of variables N", y = "RMSE of posterior-mean coefficients",
        colour = NULL,
        title = "Coefficient RMSE against the truth by number of variables",
-       subtitle = "Standardized scale, averaged over replicates") +
+       subtitle = "Standardized scale") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
