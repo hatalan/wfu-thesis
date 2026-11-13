@@ -89,3 +89,6 @@ notebooks/*.html
 
 # Claude Code scratch notes (placed last so the "!*.*" rule above does not re-include it)
 .claude/
+
+# Rendered presentation
+presentation/*.html
