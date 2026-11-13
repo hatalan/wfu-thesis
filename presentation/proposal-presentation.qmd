@@ -9,7 +9,6 @@ bibliography: references.bib
 format:
   revealjs:
     slide-number: true
-    # Wide 16:9 canvas with small margins so figures can use the full slide
     width: 1600
     height: 900
     margin: 0.04
@@ -27,7 +26,7 @@ format:
 2. What is R^2^ in a time series?
 3. Bayesian VARs and and common priors
 4. R2D2 and the ARR2 prior
-5. ARR2 for AR mdoels: what the R² prior actually controls
+5. ARR2 for AR models
 6. Extending ARR2 to VARs
 7. Future work
 
@@ -55,7 +54,7 @@ $$
 $$
 
 - A multivariate extension of an AR(p) process.
-- Each $A_i$ is $N \times N$, so every series depends on the past values of every series.
+- Each $\mathbf{A}_i$ is $N \times N$, so every series depends on the past values of every series.
 - The number of coefficients grows quadratically as $N$ increase (there are $N^2 p$ coefficients). With $N = 8$ and $p = 4$, we already have 256 coefficients.
 - Time series (in macroeconomics, social science data) often have low series length, so shrinkage is necessary for stable coefficient estimates.
 
@@ -137,30 +136,39 @@ $$
 
 ## What does the R² parameter control?
 
-Integrating over the coefficients (not the hyperparameters), with a fixed lag covariance $\Gamma$ whose diagonal is $\sigma_y^2$:
+To examine the properties of the prior, we can consider R^2^ under the prior predictive distribution, so we have
+
+$$\operatorname{Var}(\mu_t) = \mathbf{\phi}^\top\hat{\Gamma}\mathbf{\phi},$$
+
+where $\hat{\Gamma}$ is the sample autocovariance matrix.
+
+After some rearrangement, we can show that integrating over the coefficients $\mathbf{\phi}$ gives us,
 
 $$
-E_z\!\left[\phi^\top \Gamma \phi\right] = \sum_i \operatorname{Var}(\phi_i)\,\Gamma_{ii} = \sigma^2 \tau^2
-\quad\Longrightarrow\quad
-\frac{E_z[\text{signal}]}{E_z[\text{signal}] + \sigma^2} = R^2
+E_{\mathbf{\phi}}\!\left[\operatorname{Var}(\mu_t)\right] \approx \sigma^2\tau^2.
 $$
 
-- The cross terms vanish because the $\phi_i$ are independent with mean zero.
-- So the **target is the marginal Bayesian R²**: a ratio of expectations.
+Substituting the expected value into our definition of R^2^, it follows
 
-## Two gaps between R² and the fit you get
+$$
+\frac{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right]}{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right] + \sigma^2} \approx \frac{\tau^2}{1 + \tau^2} = R^2_{\text{prior}}
+$$
 
-1. **Jensen gap (per draw).** $R^2_B$ is concave in the signal variance, so
-   $E_z\!\left[R^2_B\right] \le R^2$. The prior's R² is an upper bound on the typical draw's fit; the gap shrinks as more coefficients share the budget.
-2. **Population gap.** Population R² uses $\Gamma(\phi)$, which depends on the draw, and drops non-stationary draws.
-   - AR(1): $R^2_{\text{pop}} = \phi^2 = R^2 z^2$, stationary only if $R^2 z^2 < 1$, so
-     $E[R^2_{\text{pop}} \mid \text{stationary}] < R^2$.
+That is, the prior is controlling $R^2$ after integrating out the autoregressive coefficients in $\operatorname{Var}(\mu_t)$.
 
-::: notes
-Example: "This is not a flaw unique to ARR2: any R2D2-type prior has the Jensen gap. What is specific to time series is that the regressors are the series' own lags, so the population R² is a second, legitimate target the construction does not control."
-:::
+## What does the R² parameter control?
 
-## AR results: stationarity
+However, taking $E_\mathbf{\phi}\![R^2 \mid \tau^2, \psi, \sigma^2]$ does not lend the same equality. We have, $R^2 = \frac{\mathbf{\phi}^\top\hat{\Gamma}\mathbf{\phi}}{\mathbf{\phi}^\top\hat{\Gamma}\mathbf{\phi} + \sigma^2}$, so $R^2 = g(\mathbf{\phi}^\top\hat{\Gamma}\mathbf{\phi})$ where $g$ is a concave function. Then,
+
+\begin{align*}
+E_\mathbf{\phi}\![R^2 \mid \tau^2, \psi, \sigma^2] &= E_\mathbf{\phi}\![g(\mathbf{\phi}^\top\hat{\Gamma}\mathbf{\phi}) \mid \tau^2, \psi, \sigma^2] \\ 
+&\leq g\left(E_\mathbf{\phi}\![\mathbf{\phi}^\top\hat{\Gamma}\mathbf{\phi} \mid \tau^2, \psi, \sigma^2]\right) \\
+&\approx R^2_{\text{prior}},
+\end{align*}
+
+where the inequality holds due to Jensen's inequality. So, $E_\mathbf{\phi}\![R^2 \mid \tau^2, \psi, \sigma^2]\leq R^2_\text{prior}$. 
+
+## AR results: Stationarity
 
 ![](../notebooks/ar/figures/prior_stationarity_2.png){fig-alt="Share of prior draws that are stationary, by lag order" fig-align="center" width="85%"}
 
