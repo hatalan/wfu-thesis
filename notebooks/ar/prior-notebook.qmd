@@ -282,22 +282,47 @@ write_csv(all_draws_2, "results/prior_r2_draws_2.csv")
 ```
 
 ```{r}
-p_r2_2 <- results_2 %>%
+# Notation (as in the presentation): R2_proc = implied process R2 (Yule-Walker, needs a
+# stationary draw); R2 = Bayesian R2 on the observed lags (any draw); R2_prior = the ARR2
+# Beta-distributed R2 parameter.
+relabel_config <- function(x) str_replace(x, "R2 mean = ", "prior R\u00b2 mean ")
+
+r2_long_2 <- all_draws_2 %>%
+  group_by(config, p) %>%
+  summarise(proc  = if (any(stationary)) median(r2_exact[stationary]) else NA_real_,
+            bayes = median(r2_bayes),
+            .groups = "drop") %>%
+  pivot_longer(c(proc, bayes), names_to = "measure", values_to = "r2_med") %>%
+  mutate(measure = factor(measure, levels = c("proc", "bayes"),
+                          labels = c("Implied process R\u00b2 (stationary draws)",
+                                     "Bayesian R\u00b2 (all draws)")),
+         config  = relabel_config(config))
+
+# Median of R2_prior for the two ARR2 settings
+r2_prior_ref <- tibble(
+  r2 = c(qbeta(0.5, mean_R2_1 * prec_R2_1, (1 - mean_R2_1) * prec_R2_1),
+         qbeta(0.5, mean_R2_2 * prec_R2_2, (1 - mean_R2_2) * prec_R2_2)))
+
+p_r2_2 <- r2_long_2 %>%
   ggplot(aes(p, r2_med, colour = config)) +
+  geom_hline(data = r2_prior_ref, aes(yintercept = r2),
+             linetype = "dotted", colour = "grey40") +
   geom_line() +
   geom_point() +
+  facet_wrap(~ measure) +
   scale_x_log10(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Prior-implied " * R^2 * " (among stationary coefficient vector)"),
+       y = "Prior-implied median",
        colour = NULL, fill = NULL,
        title = "Prior-implied R-squared by lag order",
-       subtitle = "Median") +
+       subtitle = "Median; dotted: median of the R2_prior settings (1/3 and 2/3)") +
   theme_minimal()
 ```
 
 ```{r}
 p_stat_2 <- results_2 %>%
+  mutate(config = relabel_config(config)) %>%
   ggplot(aes(p, prop_stat, colour = config)) +
   geom_line() +
   geom_pointrange(aes(ymin = prop_stat - 2 * mcse,
@@ -317,8 +342,8 @@ p_stat_2
 ```{r}
 # Slide versions (larger text, no titles) for the presentation
 source("../slide-theme.R")
-save_slide(p_r2_2,   "figures/prior_r2_by_p_2.png",      legend = "right")
-save_slide(p_stat_2, "figures/prior_stationarity_2.png", legend = "right")
+save_slide(p_r2_2,   "figures/prior_r2_by_p_2.png")
+save_slide(p_stat_2, "figures/prior_stationarity_2.png")
 ```
 
 ```{r}

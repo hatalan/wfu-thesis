@@ -60,30 +60,30 @@ $$
 
 # What is R^2^ in a time series? {background-color="#9E7E38"}
 
-## Population R^2^
+## Implied process R^2^
 
-Consider a known stationary $AR(p)$ process, we have a population R^2^. From Yule-Walker, we have 
+Consider a known stationary $AR(p)$ process; it has an implied process R^2^, written $R^2_{\text{proc}}$. From Yule-Walker, we have 
 
 $$\gamma_0 = \sum^p_{i=1} \phi_i\gamma_i + \sigma^2,$$
 
 where $\gamma_i$ is the $i$th autocovariance and $\gamma_0$ is derived process variance. Dividing by $\gamma_0$ and rearranging gives
 
 \begin{align*}
-  R^2_{\text{pop}} &= 1 - \frac{\sigma^2}{\gamma_0} \\
+  R^2_{\text{proc}} &= 1 - \frac{\sigma^2}{\gamma_0} \\
   &= \sum^p_{i=1}\phi_i\rho_i.
 \end{align*}
 
-So, given the coefficient of an AR(p) process, we have an implied process R^2^~pop~.
+So, given the coefficients of an AR(p) process, we have an implied process R^2^, $R^2_{\text{proc}}$.
 
 ## Bayesian R^2^
 
 We also have a notion of Bayesian R^2^ [@gelman2019r2], which can be calculated per posterior (or prior) draw:
 
 $$
-R^2_{B} = \frac{\operatorname{Var}(\hat\mu_{t})}{\operatorname{Var}(\hat\mu_{t}) + \sigma_k^2}, \qquad \hat\mu_t = \sum_{i=1}^p \phi_i\, y_{t-i}
+R^2 = \frac{\operatorname{Var}(\hat\mu_{t})}{\operatorname{Var}(\hat\mu_{t}) + \sigma^2}, \qquad \hat\mu_t = \sum_{i=1}^p \phi_i\, y_{t-i}
 $$
 
-This gives a full distribution for R^2^.
+This gives a full distribution for R^2^. From here on, $R^2$ without a subscript means this Bayesian R^2^.
 
 # Bayesian VARs {background-color="#9E7E38"}
 
@@ -104,18 +104,18 @@ $$
 
 # R2D2 and ARR2 {background-color="#9E7E38"}
 
-## R2D2: An R^2^ prior on model fit
+## R2D2: A prior on model fit
 
 First parameterized for linear regression [@zhang2022r2d2]:
 
-- A Beta prior is set on $R^2$.
-- The ratio $\tau^2 = R^2/(1 - R^2)$ is split across coefficients with a Dirichlet simplex $\psi$:
+- A Beta prior is set on a fit parameter, $R^2_{\text{prior}}$.
+- The ratio $\tau^2 = R^2_{\text{prior}}/(1 - R^2_{\text{prior}})$ is split across coefficients with a Dirichlet simplex $\psi$:
 
 $$
 \beta_j \sim N\!\left(0,\; \frac{\sigma^2}{s_{x_j}^2}\,\tau^2\,\psi_j\right), \qquad \psi \sim \operatorname{Dir}(\xi)
 $$
 
-- So, a global variance "knob" (R^2^) is allocated across the prior, and total prior explained variance remains consistent as the model expands. @riha2026select uses R2D2 as an example when formalizing this idea.
+- So, a global variance "knob" ($R^2_{\text{prior}}$) is allocated across the prior, and total prior explained variance remains consistent as the model expands. @riha2026select uses R2D2 as an example when formalizing this idea.
 
 ## ARR2: R2D2 for autoregressions
 
@@ -123,8 +123,8 @@ $$
 
 $$
 \phi_i \sim N\!\left(0,\; \frac{\sigma^2}{\operatorname{var}(y_t)}\,\tau^2\,\psi_i\right), \quad
-\tau^2 = \frac{R^2}{1 - R^2}, \quad
-R^2 \sim \operatorname{Beta}, \quad
+\tau^2 = \frac{R^2_{\text{prior}}}{1 - R^2_{\text{prior}}}, \quad
+R^2_{\text{prior}} \sim \operatorname{Beta}, \quad
 \psi \sim \operatorname{Dir}(\xi_1, \dots, \xi_p)
 $$
 
@@ -134,7 +134,7 @@ $$
 
 # ARR2 in the AR case {background-color="#9E7E38"}
 
-## What does the R² parameter control?
+## What does $R^2_{\text{prior}}$ control?
 
 To examine the properties of the prior, we can consider R^2^ under the prior predictive distribution, so we have
 
@@ -156,7 +156,7 @@ $$
 
 That is, the prior is controlling $R^2$ after integrating out the autoregressive coefficients in $\operatorname{Var}(\mu_t)$.
 
-## What does the R² parameter control?
+## What does $R^2_{\text{prior}}$ control?
 
 However, taking $E_\mathbf{\phi}\![R^2 \mid \tau^2, \psi, \sigma^2]$ does not lend the same equality. We have, $R^2 = \frac{\mathbf{\phi}^\top\hat{\Gamma}\mathbf{\phi}}{\mathbf{\phi}^\top\hat{\Gamma}\mathbf{\phi} + \sigma^2}$, so $R^2 = g(\mathbf{\phi}^\top\hat{\Gamma}\mathbf{\phi})$ where $g$ is a concave function. Then,
 
@@ -180,10 +180,10 @@ Walk through one line on each panel. [Fill in the key numbers from the figures, 
 
 ## AR results: implied fit
 
-![](../notebooks/ar/figures/prior_r2_by_p_2.png){fig-alt="Prior-implied population R² by lag order" fig-align="center" width="85%"}
+![](../notebooks/ar/figures/prior_r2_by_p_2.png){fig-alt="Prior-implied process R² and Bayesian R² by lag order" fig-align="center" width="85%"}
 
-- Naive priors' implied fit climbs with $p$; ARR2's stays near (below) its target.
-- [Optional: replace with the Bayesian R² version (`bayes_med` in prior-notebook.qmd)]{.todo}
+- Left: $R^2_{\text{proc}}$ (stationary draws). Right: $R^2$ (all draws). Dotted: median of $R^2_{\text{prior}}$.
+- [Takeaway: ARR2's $R^2$ sits just below $R^2_{\text{prior}}$ (Jensen); $R^2_{\text{proc}}$ sits further below]{.todo}
 
 # Extending ARR2 to VARs {background-color="#9E7E38"}
 
@@ -198,10 +198,10 @@ $$
 
 $$
 \psi = w_1 \tilde\psi, \quad \gamma = w_2 \tilde\gamma, \quad w \sim \operatorname{Dir}(\xi_{\text{split}}), \quad
-\tau^2 = \frac{R^2}{1-R^2}
+\tau^2 = \frac{R^2_{\text{prior}}}{1-R^2_{\text{prior}}}
 $$
 
-- Same argument as the AR case: $E_z[\sum_k v_k] = \operatorname{tr}\Sigma\,\tau^2$, so the target is the marginal Bayesian $R^2_{\text{trace}}$.
+- Same argument as the AR case: $E_z[\sum_k v_k] = \operatorname{tr}\Sigma\,\tau^2$, so $R^2_{\text{prior}}$ targets the marginal $R^2_{\text{trace}}$.
 - Order-invariant: does not depend on how the variables are ordered.
 
 ::: notes
@@ -220,9 +220,9 @@ Contrast with ARR2's own VAR extension, which works equation by equation and has
 : {tbl-colwidths="[8,34,30,16,12]"}
 :::
 
-- Priors compared: independent normal (sd 1), hierarchical Minnesota, ARR2 flat, ARR2 Minnesota-style concentrations (R² mean 1/3).
+- Priors compared: independent normal (sd 1), hierarchical Minnesota, ARR2 flat, ARR2 Minnesota-style concentrations ($R^2_{\text{prior}}$ mean 1/3).
 - $T = 150$ standardized observations; Stan, 4 chains × 1000 draws.
-- All R² summaries are **Bayesian R²**.
+- All summaries are of $R^2$ (Bayesian), mostly its trace version $R^2_{\text{trace}}$.
 
 ::: notes
 Sweep 02's lag structures: baseline VAR(2), long decaying lags (VAR(6)), sparse (lags 1 and 4 only), near unit root.
@@ -256,7 +256,7 @@ Sweep 02's lag structures: baseline VAR(2), long decaying lags (VAR(6)), sparse 
 
 ## Sweep 03: adding variables
 
-- True model: 4 independent copies of the baseline VAR(2), with block R² of 0.30, 0.60, 0.15 and 0.45.
+- True model: 4 independent copies of the baseline VAR(2), with block $R^2_{\text{proc}}$ of 0.30, 0.60, 0.15 and 0.45.
 - Fit the first $N = 2, 4, 6, 8$ series: each subset is itself a VAR(2), so the truth is known exactly.
 - All cross-block coefficients are truly zero.
 
@@ -269,7 +269,7 @@ Example: "This design is easy to explain: adding a block adds variables without 
 ![](../notebooks/var/figures/var-sweep-03/var_prior_r2_by_N.png){fig-alt="Prior-implied Bayesian R² by number of variables" fig-align="center" width="95%"}
 
 - Minnesota: median prior $R^2_{\text{trace}}$ rises from about 0.20 to 0.42 across $N$ and $p$.
-- ARR2: stays between about 0.19 and 0.29, approaching its target (dashed) from below as the Jensen gap shrinks.
+- ARR2: stays between about 0.19 and 0.29, approaching the median of $R^2_{\text{prior}}$ (dashed) from below as the Jensen gap shrinks.
 - Normal: near 1 throughout.
 
 ::: notes
