@@ -19,6 +19,17 @@ format:
           <style>
           .todo { color: #b5179e; font-style: italic; }
           .caveat { color: #6c757d; font-size: 0.8em; }
+          /* Wake Forest Old Gold (#9E7E38) frame around every slide */
+          .reveal .slides {
+            border: 6px solid #9E7E38;
+            border-radius: 4px;
+            box-sizing: border-box;
+          }
+          .reveal .slides > section,
+          .reveal .slides > section > section {
+            box-sizing: border-box;
+            padding: 16px 28px !important;
+          }
           </style>
 ---
 
@@ -271,11 +282,15 @@ Contrast with ARR2's own VAR extension, which works equation by equation and has
 
 ## Simulation design
 
+::: {style="font-size: 0.85em"}
 | Sweep | True model | Varies | Modes | Datasets |
 |---|---|---|---|---|
-| 01 | Baseline VAR(2), $N = 2$ | $p = 1, \dots, 8$ | prior, fit | 1 |
-| 02 | 4 lag structures, $N = 2$ | $p = 1, \dots, 12$ | fit | 1 |
-| 03 | 4 independent 2-variable blocks | $N = 2, 4, 6, 8$; $p = 1, 2, 4$ | prior, fit | 3 |
+| 01 | Baseline VAR(2), N = 2 | p = 1–8 | prior, fit | 1 |
+| 02 | 4 lag structures, N = 2 | p = 1–12 | fit | 1 |
+| 03 | 4 independent 2-variable blocks | N = 2, 4, 6, 8; p = 1, 2, 4 | prior, fit | 3 |
+
+: {tbl-colwidths="[8,34,30,16,12]"}
+:::
 
 - Priors compared: independent normal (sd 1), hierarchical Minnesota, ARR2 flat, ARR2 Minnesota-style concentrations (R² mean 1/3).
 - $T = 150$ standardized observations; Stan, 4 chains × 1000 draws.
