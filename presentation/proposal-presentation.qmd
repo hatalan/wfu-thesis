@@ -11,8 +11,7 @@ format:
     incremental: false
     smaller: true
     scrollable: true
-    # Set to true for a single shareable .html file (needs internet when rendering).
-    embed-resources: false
+    embed-resources: true
     html-math-method: mathjax
     include-in-header:
       - text: |
