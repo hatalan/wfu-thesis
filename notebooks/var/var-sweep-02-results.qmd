@@ -178,7 +178,7 @@ p_r2_mean <- r2_plot_df %>%
   geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.12, colour = NA) +
   geom_line() +
   geom_point(size = 1.2) +
-  facet_wrap(~ dgp_lab, nrow = 2) +
+  facet_wrap(~ dgp_lab, nrow = 2, labeller = label_wrap_gen(16)) +
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
@@ -267,7 +267,7 @@ p_rmse <- rmse_tbl %>%
              linetype = "dotted", colour = "grey50") +
   geom_line() +
   geom_point(size = 1.2) +
-  facet_grid(set ~ dgp_lab, scales = "free_y") +
+  facet_grid(set ~ dgp_lab, scales = "free_y", labeller = label_wrap_gen(16)) +
   scale_x_continuous(breaks = seq(min(p_grid), max(p_grid), by = 2)) +
   expand_limits(y = 0) +
   labs(x = "Lag order p", y = "RMSE of posterior-mean coefficients",
@@ -335,9 +335,10 @@ walk(p_coefs, print)
 ## Save figures
 
 ```{r}
-ggsave(file.path(fig_dir, "var_post_r2_mean_by_dgp.png"),     p_r2_mean,     width = 10, height = 7, dpi = 150)
+source("../slide-theme.R")   # slide versions (larger text, no titles) for the presentation
+save_slide(p_r2_mean, file.path(fig_dir, "var_post_r2_mean_by_dgp.png"), height = 6.5, base_size = 16)
 ggsave(file.path(fig_dir, "var_post_r2_measures_by_dgp.png"), p_r2_measures, width = 11, height = 9, dpi = 150)
-ggsave(file.path(fig_dir, "var_coef_rmse_by_dgp.png"),        p_rmse,        width = 11, height = 8, dpi = 150)
+save_slide(p_rmse, file.path(fig_dir, "var_coef_rmse_by_dgp.png"), height = 6.5, base_size = 16)
 iwalk(p_coefs, ~ ggsave(file.path(fig_dir, sprintf("var_coefs_p%02d_%s.png", p_show, .y)),
                         .x, width = 10, height = 7, dpi = 150))
 ```

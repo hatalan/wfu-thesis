@@ -1,0 +1,41 @@
+/*-- scss:defaults --*/
+
+// Helvetica / Arial: the same font R uses for figures ("sans"), so slide text and
+// figure text match.
+$font-family-sans-serif: "Helvetica Neue", Helvetica, Arial, sans-serif;
+$presentation-heading-font: $font-family-sans-serif;
+$presentation-heading-font-weight: 600;
+
+$body-color: #222222;
+$presentation-heading-color: #222222;
+$link-color: #9E7E38;          // Wake Forest Old Gold
+
+$title-band: #3a3a3a;          // slide title band
+$divider: #9E7E38;             // section divider background
+
+/*-- scss:rules --*/
+
+// Slide titles: dark grey band, white text
+.reveal .slides section > h2 {
+  background: $title-band;
+  color: #ffffff;
+  padding: 0.3em 0.6em;
+  border-radius: 6px;
+  margin-bottom: 0.6em;
+}
+
+// Section dividers (# headings with background-color set): white, larger heading
+.reveal .slides section[data-background-color] h1 {
+  color: #ffffff;
+  font-size: 2.4em;
+}
+
+// Title slide: thin Old Gold rule under the title
+.reveal .slides section#title-slide .title {
+  border-bottom: 4px solid $divider;
+  padding-bottom: 0.2em;
+}
+
+// Placeholders and notes
+.todo   { color: #b5179e; font-style: italic; }
+.caveat { color: #6c757d; font-size: 0.8em; }

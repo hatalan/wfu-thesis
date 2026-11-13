@@ -226,8 +226,9 @@ p_rmse
 ## Save figures
 
 ```{r}
-ggsave(file.path(fig_dir, "var_prior_r2_by_p.png"),          p_prior_r2,          width = 8,  height = 4.5, dpi = 150)
+source("../slide-theme.R")   # slide versions (larger text, no titles) for the presentation
+save_slide(p_prior_r2, file.path(fig_dir, "var_prior_r2_by_p.png"))
 ggsave(file.path(fig_dir, "var_prior_r2_by_p_measures.png"), p_prior_r2_measures, width = 8,  height = 7,   dpi = 150)
-ggsave(file.path(fig_dir, "var_prior_stationarity.png"),     p_prior_stat,        width = 8,  height = 4.5, dpi = 150)
+save_slide(p_prior_stat, file.path(fig_dir, "var_prior_stationarity.png"))
 ggsave(file.path(fig_dir, "var_coef_rmse_by_p.png"),         p_rmse,              width = 10, height = 4.5, dpi = 150)
 ```

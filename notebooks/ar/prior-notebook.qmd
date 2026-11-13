@@ -315,8 +315,10 @@ p_stat_2
 ```
 
 ```{r}
-ggsave("figures/prior_r2_by_p_2.png",    p_r2_2,   width = 8, height = 4.5, dpi = 150)
-ggsave("figures/prior_stationarity_2.png", p_stat_2, width = 8, height = 4.5, dpi = 150)
+# Slide versions (larger text, no titles) for the presentation
+source("../slide-theme.R")
+save_slide(p_r2_2,   "figures/prior_r2_by_p_2.png",      legend = "right")
+save_slide(p_stat_2, "figures/prior_stationarity_2.png", legend = "right")
 ```
 
 ```{r}

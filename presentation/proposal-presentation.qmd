@@ -17,12 +17,7 @@ format:
     scrollable: true
     embed-resources: true
     html-math-method: mathjax
-    include-in-header:
-      - text: |
-          <style>
-          .todo { color: #b5179e; font-style: italic; }
-          .caveat { color: #6c757d; font-size: 0.8em; }
-          </style>
+    theme: [default, wfu.scss]
 ---
 
 <!--
@@ -50,7 +45,7 @@ HOW TO USE THIS DRAFT
 [One sentence on the big picture]{.todo}, e.g.: "Priors in VARs are usually set coefficient by coefficient. I'm studying priors set on the fit of the whole model instead, and checking what they actually control."
 :::
 
-# AR and VAR models
+# AR and VAR models {background-color="#9E7E38"}
 
 ## Autoregressions
 
@@ -84,7 +79,7 @@ $$
 The coefficient count is the motivation for shrinkage. [Optional: mention an applied VAR with sentiment, unemployment, inflation.]{.todo}
 :::
 
-# What is R² in a time series?
+# What is R² in a time series? {background-color="#9E7E38"}
 
 ## Two notions of R²
 
@@ -124,7 +119,7 @@ $$
 Example: "The trace version is order-invariant and is what my VAR prior targets. The determinant version would also account for correlated shocks; that is future work."
 :::
 
-# Bayesian VARs
+# Bayesian VARs {background-color="#9E7E38"}
 
 ## The usual priors
 
@@ -161,7 +156,7 @@ $$
 Set up the question for the rest of the talk: "What if we put the prior on the fit directly?"
 :::
 
-# R2D2 and ARR2
+# R2D2 and ARR2 {background-color="#9E7E38"}
 
 ## R2D2: a prior on model fit
 
@@ -195,7 +190,7 @@ $$
 [One sentence on why predictive consistency matters for practitioners]{.todo}, e.g. "you can fit a big model without worrying about choosing p, because the prior keeps the total fit in check."
 :::
 
-# ARR2 in the AR case
+# ARR2 in the AR case {background-color="#9E7E38"}
 
 ## What does the R² parameter control?
 
@@ -226,30 +221,24 @@ This is the result to land: "The Beta prior is exactly a prior on the marginal B
 Example: "This is not a flaw unique to ARR2: any R2D2-type prior has the Jensen gap. What is specific to time series is that the regressors are the series' own lags, so the population R² is a second, legitimate target the construction does not control."
 :::
 
-## AR results: stationarity and implied fit
+## AR results: stationarity
 
-:::: {.columns}
-::: {.column width="50%"}
-**Stationary share of prior draws**
-
-![](../notebooks/ar/figures/prior_stationarity_2.png){fig-alt="Share of prior draws that are stationary"}
-:::
-::: {.column width="50%"}
-**Prior-implied population R²**
-
-![](../notebooks/ar/figures/prior_r2_by_p_2.png){fig-alt="Prior-implied population R² by lag order"}
-:::
-::::
+![](../notebooks/ar/figures/prior_stationarity_2.png){fig-alt="Share of prior draws that are stationary, by lag order" fig-align="center" width="85%"}
 
 - Naive priors lose stationarity fast as $p$ grows; ARR2 keeps most draws stationary.
-- Naive priors' implied fit climbs with $p$; ARR2's stays near (below) its target.
-- [Optional: replace the right panel with the Bayesian R² version (`bayes_med` in prior-notebook.qmd)]{.todo}
 
 ::: notes
 Walk through one line on each panel. [Fill in the key numbers from the figures, e.g. "with sd = 1, stationary share drops from 0.68 at p = 1 to about 0 by p = 8".]{.todo}
 :::
 
-# Extending ARR2 to VARs
+## AR results: implied fit
+
+![](../notebooks/ar/figures/prior_r2_by_p_2.png){fig-alt="Prior-implied population R² by lag order" fig-align="center" width="85%"}
+
+- Naive priors' implied fit climbs with $p$; ARR2's stays near (below) its target.
+- [Optional: replace with the Bayesian R² version (`bayes_med` in prior-notebook.qmd)]{.todo}
+
+# Extending ARR2 to VARs {background-color="#9E7E38"}
 
 ## A trace R² prior for VARs
 
@@ -292,23 +281,17 @@ Contrast with ARR2's own VAR extension, which works equation by equation and has
 Sweep 02's lag structures: baseline VAR(2), long decaying lags (VAR(6)), sparse (lags 1 and 4 only), near unit root.
 :::
 
-## Sweep 01: the prior as lags are added
+## Sweep 01: stationarity as lags are added
 
-:::: {.columns}
-::: {.column width="50%"}
-**Stationary share of prior draws**
+![](../notebooks/var/figures/var-sweep-01/var_prior_stationarity.png){fig-alt="Stationary share of prior draws by lag order" fig-align="center" width="85%"}
 
-![](../notebooks/var/figures/var-sweep-01/var_prior_stationarity.png){fig-alt="Stationary share of prior draws"}
-:::
-::: {.column width="50%"}
-**Prior-implied Bayesian R²**
+- [Key takeaway from the stationarity figure]{.todo}
 
-![](../notebooks/var/figures/var-sweep-01/var_prior_r2_by_p.png){fig-alt="Prior-implied Bayesian R² by lag order"}
-:::
-::::
+## Sweep 01: implied fit as lags are added
 
-- [Key takeaway from the stationarity panel]{.todo}
-- [Key takeaway from the R² panel, e.g. "ARR2 stays flat in p; the normal prior's implied fit rises toward 1"]{.todo}
+![](../notebooks/var/figures/var-sweep-01/var_prior_r2_by_p.png){fig-alt="Prior-implied Bayesian R² by lag order" fig-align="center" width="85%"}
+
+- [Key takeaway, e.g. "ARR2 stays flat in p; the normal prior's implied fit rises toward 1"]{.todo}
 
 ## Sweep 02: posterior fit vs. lag order
 
@@ -371,7 +354,7 @@ Scale: at N = 8, p = 4 there are 224 true-zero coefficients; total squared error
 - ARR2 with Minnesota-style concentrations has ~7% divergent transitions at large $N p$ (small Dirichlet concentrations); a reparameterization is planned.
 - Simulated data only so far.
 
-# Future work
+# Future work {background-color="#9E7E38"}
 
 ## Next steps
 
@@ -389,7 +372,7 @@ Scale: at N = 8, p = 4 there are 224 true-zero coefficients; total squared error
 ::: {#refs}
 :::
 
-# Backup slides {visibility="uncounted"}
+# Backup slides {visibility="uncounted" background-color="#9E7E38"}
 
 ## Why be Bayesian here? {visibility="uncounted"}
 

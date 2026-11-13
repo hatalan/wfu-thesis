@@ -274,7 +274,7 @@ p_rmse <- rmse_tbl %>%
   ggplot(aes(N, rmse, colour = model_lab)) +
   geom_line() +
   geom_point() +
-  facet_grid(set ~ p_lab, scales = "free_y") +
+  facet_grid(set ~ p_lab, scales = "free_y", labeller = label_wrap_gen(16)) +
   scale_x_continuous(breaks = N_grid) +
   expand_limits(y = 0) +
   labs(x = "Number of variables N", y = "RMSE of posterior-mean coefficients",
@@ -290,7 +290,8 @@ p_rmse
 ## Save figures
 
 ```{r}
-ggsave(file.path(fig_dir, "var_prior_r2_by_N.png"),     p_prior_r2,     width = 10, height = 4.5, dpi = 150)
-ggsave(file.path(fig_dir, "var_post_r2_by_N.png"),      p_post_r2,      width = 10, height = 4.5, dpi = 150)
-ggsave(file.path(fig_dir, "var_coef_rmse_by_N.png"),    p_rmse,         width = 10, height = 6,   dpi = 150)
+source("../slide-theme.R")   # slide versions (larger text, no titles) for the presentation
+save_slide(p_prior_r2, file.path(fig_dir, "var_prior_r2_by_N.png"))
+save_slide(p_post_r2,  file.path(fig_dir, "var_post_r2_by_N.png"))
+save_slide(p_rmse,     file.path(fig_dir, "var_coef_rmse_by_N.png"), height = 6.5, base_size = 16)
 ```
