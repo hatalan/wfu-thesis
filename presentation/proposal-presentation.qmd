@@ -234,7 +234,7 @@ Sweep 02's lag structures: baseline VAR(2), long decaying lags (VAR(6)), sparse 
 
 ## Sweep 02: posterior fit vs. lag order
 
-![](../notebooks/var/figures/var-sweep-02/var_post_r2_mean_by_dgp.png){fig-alt="Posterior Bayesian R² by lag order, for each true lag structure" fig-align="center" width="90%"}
+![](../notebooks/var/figures/var-sweep-02/var_post_r2_trace_by_dgp.png){fig-alt="Posterior Bayesian R² by lag order, for each true lag structure" fig-align="center" width="90%"}
 
 - [Normal prior: posterior R² inflates as spurious lags are added]{.todo}
 - [ARR2 and Minnesota: roughly flat in p, near the true value]{.todo}

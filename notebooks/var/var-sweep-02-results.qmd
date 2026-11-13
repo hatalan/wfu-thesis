@@ -167,12 +167,12 @@ r2_truth_df <- r2_truth %>%
   filter(rep == min(rep)) %>%
   mutate(dgp_lab = label_dgp(dgp), measure_lab = label_measure(measure))
 
-p_r2_mean <- r2_plot_df %>%
-  filter(measure == "R2B_mean") %>%
+p_r2_trace <- r2_plot_df %>%
+  filter(measure == "R2B_trace") %>%   # the quantity ARR2 targets
   ggplot(aes(p, r2_med, colour = model_lab, fill = model_lab)) +
   geom_vline(data = dgp_p_true, aes(xintercept = p_true),
              linetype = "dotted", colour = "grey50") +
-  geom_line(data = filter(r2_truth_df, measure == "R2B_mean"),
+  geom_line(data = filter(r2_truth_df, measure == "R2B_trace"),
             aes(p, r2_true), inherit.aes = FALSE,
             linetype = "dashed", colour = "grey20") +
   geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.12, colour = NA) +
@@ -182,14 +182,14 @@ p_r2_mean <- r2_plot_df %>%
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Posterior mean Bayesian " * R^2),
+       y = expression("Posterior Bayesian " * R[trace]^2),
        colour = NULL, fill = NULL,
-       title = "Posterior mean Bayesian R-squared by lag order and DGP",
+       title = "Posterior Bayesian trace R-squared by lag order and DGP",
        subtitle = "Median and 90% band; dashed: true Bayesian R2; dotted: true lag order") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
-p_r2_mean
+p_r2_trace
 ```
 
 ```{r}
@@ -336,7 +336,7 @@ walk(p_coefs, print)
 
 ```{r}
 source("../slide-theme.R")   # slide versions (larger text, no titles) for the presentation
-save_slide(p_r2_mean, file.path(fig_dir, "var_post_r2_mean_by_dgp.png"), height = 6.5, base_size = 16)
+save_slide(p_r2_trace, file.path(fig_dir, "var_post_r2_trace_by_dgp.png"), height = 6.5, base_size = 16)
 ggsave(file.path(fig_dir, "var_post_r2_measures_by_dgp.png"), p_r2_measures, width = 11, height = 9, dpi = 150)
 save_slide(p_rmse, file.path(fig_dir, "var_coef_rmse_by_dgp.png"), height = 6.5, base_size = 16)
 iwalk(p_coefs, ~ ggsave(file.path(fig_dir, sprintf("var_coefs_p%02d_%s.png", p_show, .y)),
