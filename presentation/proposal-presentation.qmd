@@ -8,6 +8,10 @@ bibliography: references.bib
 format:
   revealjs:
     slide-number: true
+    # Wide 16:9 canvas with small margins so figures can use the full slide
+    width: 1600
+    height: 900
+    margin: 0.04
     incremental: false
     smaller: true
     scrollable: true
@@ -18,17 +22,6 @@ format:
           <style>
           .todo { color: #b5179e; font-style: italic; }
           .caveat { color: #6c757d; font-size: 0.8em; }
-          /* Wake Forest Old Gold (#9E7E38) frame around every slide */
-          .reveal .slides {
-            border: 6px solid #9E7E38;
-            border-radius: 4px;
-            box-sizing: border-box;
-          }
-          .reveal .slides > section,
-          .reveal .slides > section > section {
-            box-sizing: border-box;
-            padding: 16px 28px !important;
-          }
           </style>
 ---
 
