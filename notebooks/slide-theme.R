@@ -12,6 +12,7 @@ theme_slides <- function(base_size = 18, legend = "bottom") {
   theme_minimal(base_size = base_size, base_family = "sans") +
     theme(
       legend.position  = legend,
+      legend.text      = element_text(hjust = 0),
       plot.title       = element_blank(),
       plot.subtitle    = element_blank(),
       strip.text       = element_text(size = rel(0.9), face = "bold"),

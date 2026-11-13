@@ -174,7 +174,7 @@ where the inequality holds due to Jensen's inequality. So, $E_\mathbf{\phi}\![R^
 
 ## AR results: implied fit
 
-![](../notebooks/ar/figures/prior_r2_by_p_2.png){fig-alt="Prior-implied process R² and Bayesian R² by lag order" fig-align="center" width="85%"}
+![](../notebooks/ar/figures/prior_sim_r2_means.png){fig-alt="Prior means of R² prior, implied process R² and Bayesian R² by lag order" fig-align="center" width="85%"}
 
 # Extending ARR2 to VARs {background-color="#9E7E38"}
 

@@ -125,9 +125,7 @@ p_means <- summ %>%
                names_to = "measure", values_to = "mean") %>%
   mutate(measure = factor(
     measure,
-    levels = c("prior_mean", "exact_mean", "next_mean", "next_mean_stat"),
-    labels = c("R2 prior", "R2 exact (stationary)",
-               "R2 next (all)", "R2 next (stationary)")
+    levels = c("prior_mean", "exact_mean", "next_mean", "next_mean_stat")
   )) %>%
   ggplot(aes(p, mean, colour = measure, linetype = dirichlet)) +
   geom_line() +
@@ -135,10 +133,23 @@ p_means <- summ %>%
   facet_wrap(~ r2_beta) +
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
-  labs(x = "Lag order p", y = expression("Mean " * R^2),
+  # Notation as in the presentation: R2_prior = the ARR2 Beta parameter,
+  # R2_proc = implied process R2 (r2_exact), R2 = Bayesian R2 on the observed lags (r2_next)
+  scale_colour_discrete(labels = expression(
+    R[prior]^2,
+    R[proc]^2 ~ "(stationary draws)",
+    R^2 ~ "(all draws)",
+    R^2 ~ "(stationary draws)")) +
+  labs(x = "Lag order p", y = expression("Prior mean of " * R^2),
        colour = NULL, linetype = "Dirichlet",
        title = "Prior mean R2 by version and lag order") +
   theme_minimal()
 
 p_means
+```
+
+```{r}
+# Slide version (larger text, no title) for the presentation
+source("../slide-theme.R")
+save_slide(p_means, "figures/prior_sim_r2_means.png")
 ```
