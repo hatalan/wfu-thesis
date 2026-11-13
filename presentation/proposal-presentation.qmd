@@ -172,18 +172,9 @@ where the inequality holds due to Jensen's inequality. So, $E_\mathbf{\phi}\![R^
 
 ![](../notebooks/ar/figures/prior_stationarity_2.png){fig-alt="Share of prior draws that are stationary, by lag order" fig-align="center" width="85%"}
 
-- Naive priors lose stationarity fast as $p$ grows; ARR2 keeps most draws stationary.
-
-::: notes
-Walk through one line on each panel. [Fill in the key numbers from the figures, e.g. "with sd = 1, stationary share drops from 0.68 at p = 1 to about 0 by p = 8".]{.todo}
-:::
-
 ## AR results: implied fit
 
 ![](../notebooks/ar/figures/prior_r2_by_p_2.png){fig-alt="Prior-implied process R² and Bayesian R² by lag order" fig-align="center" width="85%"}
-
-- Left: $R^2_{\text{proc}}$ (stationary draws). Right: $R^2$ (all draws). Dotted: median of $R^2_{\text{prior}}$.
-- [Takeaway: ARR2's $R^2$ sits just below $R^2_{\text{prior}}$ (Jensen); $R^2_{\text{proc}}$ sits further below]{.todo}
 
 # Extending ARR2 to VARs {background-color="#9E7E38"}
 
