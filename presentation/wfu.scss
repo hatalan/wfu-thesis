@@ -51,6 +51,16 @@ $divider: #9E7E38;             // section divider background
   .quarto-title-author {
     padding-left: 0;
   }
+  // Quarto's defaults leave a large gap under the subtitle (40px); tighten it
+  .subtitle {
+    margin-bottom: 0.6em;
+  }
+  .quarto-title-affiliation {
+    margin-bottom: 0;
+  }
+  .date {
+    margin-top: 0.6em;
+  }
 }
 
 // Placeholders and notes
