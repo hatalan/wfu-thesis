@@ -1,4 +1,12 @@
 ---
+# HOW TO USE THIS DRAFT
+# - Text in [brackets]{.todo} is a placeholder: replace or delete it.
+# - Bullets are example wording; keep, edit or cut.
+# - "::: notes" blocks are speaker notes (press S in the browser to see them).
+# - Figures point at the paths the notebooks save to. The VAR figures exist only after
+#   rendering the sweep results notebooks (they are not committed), so render those first
+#   or pull them from DEAC.
+# - Render with:  quarto render presentation/proposal-presentation.qmd
 title: "R²-Based Priors for Bayesian Vector Autoregressions"
 subtitle: "Thesis proposal: progress so far"
 author: "Nick Hatala"
@@ -19,17 +27,6 @@ format:
     html-math-method: mathjax
     theme: [default, wfu.scss]
 ---
-
-<!--
-HOW TO USE THIS DRAFT
-- Text in [brackets]{.todo} is a placeholder: replace or delete it.
-- Bullets are example wording; keep, edit or cut.
-- "::: notes" blocks are speaker notes (press S in the browser to see them).
-- Figures point at the paths the notebooks save to. The VAR figures exist only after
-  rendering the sweep results notebooks (they are not committed), so render those first
-  or pull them from DEAC.
-- Render with:  quarto render presentation/proposal-presentation.qmd
--->
 
 ## Roadmap
 

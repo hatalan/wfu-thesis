@@ -36,6 +36,23 @@ $divider: #9E7E38;             // section divider background
   padding-bottom: 0.2em;
 }
 
+// Title slide: subtitle, author, institution and date aligned left
+.reveal .slides section#title-slide {
+  .subtitle,
+  .quarto-title-authors,
+  .quarto-title-author,
+  .quarto-title-affiliation,
+  .date {
+    text-align: left;
+  }
+  .quarto-title-authors {
+    justify-content: flex-start;
+  }
+  .quarto-title-author {
+    padding-left: 0;
+  }
+}
+
 // Placeholders and notes
 .todo   { color: #b5179e; font-style: italic; }
 .caveat { color: #6c757d; font-size: 0.8em; }
