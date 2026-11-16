@@ -41,13 +41,13 @@ $divider: #9E7E38;             // section divider background
 // width, with tight padding and no extra space from the display math.
 .reveal .keybox {
   width: fit-content;
-  margin: 0.3em auto;
-  padding: 0 0.8em;
+  margin: 0.5em auto;
+  padding: 0.1em 0.8em;
   background: #f6f1e6;
   border-left: 5px solid $divider;
   border-radius: 4px;
   p { margin: 0; }
-  mjx-container[display="true"] { margin: 0.2em 0 !important; }
+  mjx-container[display="true"] { margin: 0.1em 0 !important; }
 }
 
 // References: smaller type so the list fits on one slide

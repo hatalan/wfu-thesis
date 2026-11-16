@@ -96,7 +96,7 @@ $$
 
 :::{.fragment}
 
-**Independent Standard Gaussian:** $a^{(i)}_{nk}\sim N (0, \sigma^2)$ for every coefficient.
+**Independent Gaussian:** $a^{(i)}_{nk}\sim N (0, \sigma^2)$ for every coefficient.
 
 :::
 :::{.fragment}
