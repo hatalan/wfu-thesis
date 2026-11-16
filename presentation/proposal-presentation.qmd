@@ -9,6 +9,7 @@ bibliography: references.bib
 format:
   revealjs:
     slide-number: true
+    footer: "Nicholas Hatala · Thesis Proposal"
     width: 1600
     height: 900
     margin: 0.04
@@ -20,9 +21,7 @@ format:
     theme: [default, wfu.scss]
 ---
 
-# AR and VAR models {background-color="#9E7E38"}
-
-## Autoregressions
+## Autoregressions {section-label="AR and VAR models"}
 
 An AR($p$) model for a single series:
 
@@ -34,7 +33,7 @@ $$
 - The value of the series at time $t$ is a linear function of the last $p$ values of the series plus a shock, $\varepsilon_t$.
 - We assume that the process is stationary.
 
-## Vector autoregressions
+## Vector autoregressions {section-label="AR and VAR models"}
 
 A VAR($p$) for $N$ series:
 
@@ -47,9 +46,7 @@ $$
 - The number of coefficients grows quadratically as $N$ increases (there are $N^2 p$ coefficients). With $N = 8$ and $p = 4$, we already have 256 coefficients.
 - Time series (in macroeconomics, social science data) often have low series length, so shrinkage is necessary for stable coefficient estimates.
 
-# What is $R^2$ in a time series? {background-color="#9E7E38"}
-
-## Bayesian $R^2$
+## Bayesian $R^2$ {section-label="R² in time series"}
 
 :::{.fragment}  
 
@@ -74,9 +71,7 @@ This gives a full distribution for $R^2$.
 
 :::
 
-# Bayesian VARs {background-color="#9E7E38"}
-
-## Bayesian VARs
+## Bayesian VARs {section-label="Bayesian VARs"}
 
 Writing out a two-equation, VAR(2):
 
@@ -98,11 +93,11 @@ $$
 - We need to specify a distribution for the likelihood, and prior distributions for coefficient and shock covariance matrices.
 - There are many ways to do this!
 
-## Two common priors
+## Two common priors {section-label="Bayesian VARs"}
 
 :::{.fragment}
 
-**Independent Gaussian:** $a^{(i)}_{nk}\sim N (0, \sigma^2)$ for every coefficient.
+**Independent Standard Gaussian:** $a^{(i)}_{nk}\sim N (0, \sigma^2)$ for every coefficient.
 
 :::
 :::{.fragment}
@@ -122,9 +117,7 @@ The Minnesota prior is designed to put greater prior mass on own-lag and more re
 
 :::
 
-# R2D2 and ARR2 {background-color="#9E7E38"}
-
-## R2D2: A prior on model fit
+## R2D2: A prior on model fit {section-label="R2D2 and ARR2"}
 
 :::{.fragment}
 
@@ -147,9 +140,11 @@ $$
 
 Substituting into $R^2$:
 
+::: keybox
 $$
 R^2 = \frac{\operatorname{Var}(\mu_i)}{\operatorname{Var}(\mu_i) + \sigma^2} = \frac{\tau^2}{\tau^2 + 1}.
 $$
+:::
 
 :::
 
@@ -163,7 +158,7 @@ $$
 
 :::
 
-## R2D2: A prior on model fit
+## R2D2: The full model {section-label="R2D2 and ARR2"}
 
 The full model is:
 
@@ -181,7 +176,7 @@ $$
 
 - A global variance "knob" ($R^2_{\text{prior}}$) is allocated across the prior, and total prior explained variance remains consistent as the model expands. @riha2026select use R2D2 as an example when formalizing this idea.
 
-## ARR2: R2D2 for autoregressions
+## ARR2: R2D2 for autoregressions {section-label="R2D2 and ARR2"}
 
 @kohns2025arr2 extend this construction to different classes of AR models:
 
@@ -199,9 +194,7 @@ $$
 - $\hat\sigma^2_{y_t}$ is a plug-in variance used to resolve mathematical and computational complexity.
 - The prior assumes the series is stationary, but does not enforce it (see @heaps2023stationarity for stationary-enforcing priors).
 
-# ARR2 in the AR case {background-color="#9E7E38"}
-
-## What does $R^2_{\text{prior}}$ control?
+## What does $R^2_{\text{prior}}$ control? {section-label="ARR2 in the AR case"}
 
 :::{.fragment}
 
@@ -229,25 +222,25 @@ $$
 
 However, taking $E_\mathbf{\phi}\ \![R^2]$, we have
 
+::: keybox
 $$
 E_\mathbf{\phi}\ \![R^2] = E_\mathbf{\phi}\!\left[\frac{\operatorname{Var}(\mu_{t})}{\operatorname{Var}(\mu_{t}) + \sigma^2}\right]
 \leq \frac{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right]}{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right] + \sigma^2}
 = R^2_{\text{prior}}
 $$
+:::
 
 by Jensen's inequality. So, the marginal prior predictive $E_\mathbf{\phi}\ \![R^2]$ is bounded by $R^2_{\text{prior}}$.
 
 :::
 
-## AR results: Implied Prior $R^2$
+## AR results: Implied Prior $R^2$ {section-label="ARR2 in the AR case"}
 
 This is demonstrated in simulation:
 
 ![](../notebooks/ar/figures/prior_sim_r2_means.png){fig-alt="Prior means of R² prior and R² by lag order" fig-align="center" width="85%"}
 
-# Extending ARR2 to VARs {background-color="#9E7E38"}
-
-## Why a trace $R^2$?
+## Why a trace $R^2$? {section-label="Extending ARR2 to VARs"}
 
 :::{.fragment}
 
@@ -276,7 +269,7 @@ $$
 
 :::
 
-## A trace $R^2$ prior for VARs
+## A trace $R^2$ prior for VARs {section-label="Extending ARR2 to VARs"}
 
 The $R^2_{\text{trace}}$ parameterization is as follows:
 
@@ -292,7 +285,7 @@ R^2_{\text{prior}} &\sim \operatorname{Beta}\!\left(\mu_{R^2}, \varphi_{R^2}\rig
 \end{aligned}
 $$
 
-## Prior-implied fit as lags are added
+## Prior-implied fit as lags are added {section-label="Extending ARR2 to VARs"}
 
 ![](../notebooks/var/figures/var-sweep-01/var_prior_r2_by_p.png){fig-alt="Prior-implied R² by lag order" fig-align="center" width="72%"}
 
@@ -300,7 +293,7 @@ $$
 Prior predictive draws for VAR($p$) in Stan, $R^2$ computed on $T = 150$ simulated observations.
 :::
 
-## Prior-implied fit as variables are added
+## Prior-implied fit as variables are added {section-label="Extending ARR2 to VARs"}
 
 ![](../notebooks/var/figures/var-sweep-03/var_prior_r2_by_N.png){fig-alt="Prior-implied R² by number of variables" fig-align="center" width="78%"}
 
@@ -308,23 +301,23 @@ Prior predictive draws for VAR($p$) in Stan, $R^2$ computed on $T = 150$ simulat
 Prior predictive draws for VAR($p$) in Stan,  $R^2$ computed on $T = 150$ simulated observations.
 :::
 
-## Posterior coefficients: VAR(2) DGP
+## Posterior coefficients: VAR(2) DGP {section-label="Extending ARR2 to VARs"}
 
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="85%"}
-
-::: aside
-VAR(12) fit in Stan on $T = 150$ observations with a common sample across models.
-:::
-
-## Posterior coefficients: Sparse, VAR(4) DGP
-
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="85%"}
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="80%"}
 
 ::: aside
 VAR(12) fit in Stan on $T = 150$ observations with a common sample across models.
 :::
 
-## References
+## Posterior coefficients: Sparse, VAR(4) DGP {section-label="Extending ARR2 to VARs"}
+
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="80%"}
+
+::: aside
+VAR(12) fit in Stan on $T = 150$ observations with a common sample across models.
+:::
+
+## References {.refs}
 
 ::: {#refs}
 :::

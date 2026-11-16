@@ -24,14 +24,41 @@ $divider: #9E7E38;             // section divider background
   margin-bottom: 0.6em;
 }
 
-// Section dividers (# headings with background-color set): white, larger heading
-.reveal .slides section[data-background-color] h1 {
-  color: #ffffff;
-  font-size: 2.4em;
+// Section label: small Old Gold text above the title band, set per slide with
+// `## Title {section-label="..."}`
+.reveal .slides section[data-section-label]::before {
+  content: attr(data-section-label);
+  display: block;
+  color: $divider;
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.25em;
 }
 
-// Title slide: thin Old Gold rule under the title
+// Key result box: wrap an equation in `::: keybox`
+.reveal .keybox {
+  background: #f6f1e6;
+  border-left: 6px solid $divider;
+  border-radius: 4px;
+  padding: 0.1em 1em;
+  margin: 0.6em 0;
+}
+
+// References: smaller type so the list fits on one slide
+.reveal .slides section.refs #refs {
+  font-size: 0.85em;
+}
+
+// Footer: quiet grey
+.reveal .footer {
+  color: #6c757d;
+}
+
+// Title slide: left-aligned title with a thin Old Gold rule underneath
 .reveal .slides section#title-slide .title {
+  text-align: left;
   border-bottom: 4px solid $divider;
   padding-bottom: 0.2em;
 }
