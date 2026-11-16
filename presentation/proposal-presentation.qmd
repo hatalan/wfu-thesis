@@ -102,13 +102,13 @@ $$
 - $\theta$: cross-variable tightness
 - $d$: lag decay
 
-The Minnesota prior is designed to put greater prior mass on own-lag and lower-lag coefficients (that is, the series is similar to a random walk).
+The Minnesota prior is designed to put greater prior mass on own-lag and more recent lag coefficients (that is, the series is similar to a random walk).
 
 # R2D2 and ARR2 {background-color="#9E7E38"}
 
 ## R2D2: A prior on model fit
 
-First parameterized for linear regression [@zhang2022r2d2]:
+First parameterized for linear regression [@zhang2022r2d2], and since then extended to multilevel models [@aguilar2023r2d2m2] and generalized linear mixed models [@yanchenko2025r2d2glmm].
 
 $\operatorname{Var}(\mu_i)$ can (by conditional independence and assuming coefficient prior mean of 0) be written as $\sum\operatorname{Var}(x_j)\operatorname{Var}(\beta_j)$, so we can set the coefficient prior variances equal to a constant $c$ times the components of a Dirichlet vector, to reduce the sum:
 
@@ -116,10 +116,10 @@ $$
 \operatorname{Var}(\mu_i) = \sum_{j=1}^n \operatorname{Var}(x_j)\operatorname{Var}(\beta_j) = \sum_{j=1}^n \operatorname{Var}(x_j)\ c\ \psi_j = c \sum_{j=1}^n \operatorname{Var}(x_j)
 $$
 
-and letting $c = \frac{\sigma^2}{\sum\operatorname{Var}(x_j)}\tau^2$, and plugging into a representation of $R^2$:
+and letting $c = \frac{\sigma^2}{\sum\operatorname{Var}(x_j)}\tau^2$, and plugging into $R^2$:
 
 $$
-R^2 = \frac{\sum_{j=1}^n \operatorname{Var}(x_j)\operatorname{Var}(\beta_j)}{\sum_{j=1}^n \operatorname{Var}(x_j)\operatorname{Var}(\beta_j) + \sigma^2} = \frac{\tau^2}{\tau^2 + 1}.
+R^2 = \frac{\operatorname{Var}(\mu_i)}{\operatorname{Var}(\mu_i) + \sigma^2} = \frac{\tau^2}{\tau^2 + 1}.
 $$
 
 This induces the following prior on each $\beta_j$:
@@ -162,9 +162,8 @@ R^2_{\text{prior}} &\sim \operatorname{Beta}\!\left(\mu_{R^2}, \varphi_{R^2}\rig
 \end{aligned}
 $$
 
-- Concentrations $\xi$ can be set to induce variance allocation as desired (flat, Minnesota-like, etc.).
 - $\hat\sigma^2_{y_t}$ is a plug-in variance used to resolve mathematical and computational complexity.
-- The prior assumes the series is stationary, but does not enforce it; @heaps2023stationarity gives a VAR parameterization that does.
+- The prior assumes the series is stationary, but does not enforce it.
 
 # ARR2 in the AR case {background-color="#9E7E38"}
 
@@ -182,7 +181,7 @@ $$
 \frac{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right]}{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right] + \sigma^2} \approx \frac{\tau^2}{1 + \tau^2} = R^2_{\text{prior}}
 $$
 
-That is, the prior is controlling $R^2$ after integrating out the autoregressive coefficients in $\operatorname{Var}(\mu_t)$. However, taking $E_\mathbf{\phi}\![R^2]$. Instead, we have
+That is, the prior is controlling $R^2$ after integrating out the autoregressive coefficients in $\operatorname{Var}(\mu_t)$. However, taking $E_\mathbf{\phi}\ \![R^2]$. Instead, we have
 
 $$
 E_\mathbf{\phi}\ \![R^2] = E_\mathbf{\phi}\!\left[\frac{\operatorname{Var}(\mu_{t})}{\operatorname{Var}(\mu_{t}) + \sigma^2}\right]
@@ -212,13 +211,14 @@ $$
 R^2_{\text{trace}} = \frac{\sum_n \operatorname{Var}(\mu_{n,t})}{\sum_n \operatorname{Var}(\mu_{n,t}) + \operatorname{tr}(\Sigma)}
 = \sum_n w_n R^2_n
 $$
-- can be interpreted as a weighted sum of equation-level R^2^
--A single $R^2_{\text{prior}}$ sets the system-level total variance (as summarized by $R^2_{\text{trace}}$), and Dirichlet weights split it across equations, lags, and cross terms.
+
+- This can be interpreted as a weighted sum of equation-level R^2^.
+- A single $R^2_{\text{prior}}$ sets the system-level total variance (as summarized by $R^2_{\text{trace}}$), and Dirichlet weights split it across equations, lags, and cross terms.
 - The trace is linear, so the R2D2 and ARR2 arguments carry over directly: $E\!\left[\sum_n \operatorname{Var}(\mu_{n,t})\right] = \operatorname{tr}(\Sigma)\,\tau^2$.
 
 ## A trace R² prior for VARs
 
-The trace R^2^ version is as follows:
+The trace R^2^ parameterization is as follows:
 
 $$
 \begin{aligned}
@@ -238,19 +238,13 @@ $$
 
 ![](../notebooks/var/figures/var-sweep-01/var_prior_r2_by_p.png){fig-alt="Prior-implied R² by lag order" fig-align="center" width="72%"}
 
-Prior-implied $R^2_{\text{trace}}$ for a two-variable VAR as the lag order grows.^[Simulations run in Stan.]
+[Simulations run in Stan.]
 
 ## Prior fit as variables are added
 
 ![](../notebooks/var/figures/var-sweep-03/var_prior_r2_by_N.png){fig-alt="Prior-implied R² by number of variables" fig-align="center" width="78%"}
 
-Prior-implied $R^2_{\text{trace}}$ as variables are added, at $p = 1, 2, 4$.^[Simulations run in Stan.]
-
-## Posterior fit as variables are added
-
-![](../notebooks/var/figures/var-sweep-03/var_post_r2_by_N.png){fig-alt="Posterior R² by number of variables" fig-align="center" width="78%"}
-
-Posterior $R^2_{\text{trace}}$ against the true value (dashed) as variables are added.^[Simulations run in Stan.]
+[Simulations run in Stan.]
 
 ## Posterior coefficients by lag
 
