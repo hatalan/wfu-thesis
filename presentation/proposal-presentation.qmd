@@ -145,6 +145,7 @@ R^2_{\text{prior}} &\sim \operatorname{Beta}\!\left(\mu_{R^2}, \varphi_{R^2}\rig
 $$
 
 - A global variance "knob" ($R^2_{\text{prior}}$) is allocated across the prior, and total prior explained variance remains consistent as the model expands. @riha2026select uses R2D2 as an example when formalizing this idea.
+- R2D2 has since been extended to multilevel models [@aguilar2023r2d2m2], generalized linear mixed models [@yanchenko2025r2d2glmm] and autoregressions [@kohns2025arr2].
 
 ## ARR2: R2D2 for autoregressions
 
@@ -163,7 +164,7 @@ $$
 
 - Concentrations $\xi$ can be set to induce variance allocation as desired (flat, Minnesota-like, etc.).
 - $\hat\sigma^2_{y_t}$ is a plug-in variance used to resolve mathematical and computational complexity.
-- The prior assumes the series is stationary, but does not enforce it.
+- The prior assumes the series is stationary, but does not enforce it; @heaps2023stationarity gives a VAR parameterization that does.
 
 # ARR2 in the AR case {background-color="#9E7E38"}
 
@@ -194,7 +195,7 @@ by Jensen's inequality.
 
 This is demonstrated in simulation:
 
-![](../notebooks/ar/figures/prior_sim_r2_means.png){fig-alt="Prior means of R² prior, implied process R² and Bayesian R² by lag order" fig-align="center" width="85%"}
+![](../notebooks/ar/figures/prior_sim_r2_means.png){fig-alt="Prior means of R² prior, implied process R² and R² by lag order" fig-align="center" width="85%"}
 
 # Extending ARR2 to VARs {background-color="#9E7E38"}
 
@@ -235,13 +236,45 @@ $$
 
 ## Prior fit as lags are added
 
-![](../notebooks/var/figures/var-sweep-01/var_prior_r2_by_p.png){fig-alt="Prior-implied Bayesian R² by lag order" fig-align="center" width="85%"}
+![](../notebooks/var/figures/var-sweep-01/var_prior_r2_by_p.png){fig-alt="Prior-implied R² by lag order" fig-align="center" width="72%"}
+
+Prior-implied $R^2_{\text{trace}}$ for a two-variable VAR as the lag order grows.^[Simulations run in Stan.]
 
 ## Prior fit as variables are added
 
-![](../notebooks/var/figures/var-sweep-03/var_prior_r2_by_N.png){fig-alt="Prior-implied Bayesian R² by number of variables" fig-align="center" width="95%"}
+![](../notebooks/var/figures/var-sweep-03/var_prior_r2_by_N.png){fig-alt="Prior-implied R² by number of variables" fig-align="center" width="78%"}
+
+Prior-implied $R^2_{\text{trace}}$ as variables are added, at $p = 1, 2, 4$.^[Simulations run in Stan.]
 
 ## Posterior fit as variables are added
+
+![](../notebooks/var/figures/var-sweep-03/var_post_r2_by_N.png){fig-alt="Posterior R² by number of variables" fig-align="center" width="78%"}
+
+Posterior $R^2_{\text{trace}}$ against the true value (dashed) as variables are added.^[Simulations run in Stan.]
+
+## Posterior coefficients by lag
+
+Fitted with $p = 12$ to four true lag structures: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
+
+::: {.panel-tabset}
+
+### Baseline VAR(2)
+
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="55%"}
+
+### Long decay (VAR(6))
+
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_long_decay.png){fig-alt="Posterior coefficients by lag, long-decay VAR(6)" fig-align="center" width="55%"}
+
+### Sparse (lags 1 and 4)
+
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="55%"}
+
+### Near unit root
+
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_near_unit_root.png){fig-alt="Posterior coefficients by lag, near unit root" fig-align="center" width="55%"}
+
+:::
 
 ## References
 

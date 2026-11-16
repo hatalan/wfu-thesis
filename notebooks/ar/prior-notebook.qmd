@@ -295,7 +295,7 @@ r2_long_2 <- all_draws_2 %>%
   pivot_longer(c(proc, bayes), names_to = "measure", values_to = "r2_med") %>%
   mutate(measure = factor(measure, levels = c("proc", "bayes"),
                           labels = c("Implied process R\u00b2 (stationary draws)",
-                                     "Bayesian R\u00b2 (all draws)")),
+                                     "R\u00b2 (all draws)")),
          config  = relabel_config(config))
 
 # Median of R2_prior for the two ARR2 settings

@@ -182,10 +182,10 @@ p_r2_trace <- r2_plot_df %>%
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Posterior Bayesian " * R[trace]^2),
+       y = expression("Posterior " * R[trace]^2),
        colour = NULL, fill = NULL,
-       title = "Posterior Bayesian trace R-squared by lag order and DGP",
-       subtitle = "Median and 90% band; dashed: true Bayesian R2; dotted: true lag order") +
+       title = "Posterior trace R-squared by lag order and DGP",
+       subtitle = "Median and 90% band; dashed: true R2; dotted: true lag order") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
@@ -208,10 +208,10 @@ p_r2_measures <- r2_plot_df %>%
   scale_x_continuous(breaks = seq(min(p_grid), max(p_grid), by = 2)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Posterior Bayesian " * R^2),
+       y = expression("Posterior " * R^2),
        colour = NULL, fill = NULL,
-       title = "Posterior Bayesian R-squared by lag order, DGP and R2 variant",
-       subtitle = "Median and 90% band; dashed: true Bayesian R2; dotted: true lag order") +
+       title = "Posterior R-squared by lag order, DGP and R2 variant",
+       subtitle = "Median and 90% band; dashed: true R2; dotted: true lag order") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
@@ -339,6 +339,6 @@ source("../slide-theme.R")   # slide versions (larger text, no titles) for the p
 save_slide(p_r2_trace, file.path(fig_dir, "var_post_r2_trace_by_dgp.png"), height = 6.5, base_size = 16)
 ggsave(file.path(fig_dir, "var_post_r2_measures_by_dgp.png"), p_r2_measures, width = 11, height = 9, dpi = 150)
 save_slide(p_rmse, file.path(fig_dir, "var_coef_rmse_by_dgp.png"), height = 6.5, base_size = 16)
-iwalk(p_coefs, ~ ggsave(file.path(fig_dir, sprintf("var_coefs_p%02d_%s.png", p_show, .y)),
-                        .x, width = 10, height = 7, dpi = 150))
+iwalk(p_coefs, ~ save_slide(.x, file.path(fig_dir, sprintf("var_coefs_p%02d_%s.png", p_show, .y)),
+                            height = 6.5, base_size = 20))
 ```

@@ -63,6 +63,11 @@ $divider: #9E7E38;             // section divider background
   }
 }
 
+// Footnotes: indent past the slide menu button in the bottom-left corner
+.reveal .slides section .footnotes {
+  padding-left: 2.5em;
+}
+
 // Placeholders and notes
 .todo   { color: #b5179e; font-style: italic; }
 .caveat { color: #6c757d; font-size: 0.8em; }

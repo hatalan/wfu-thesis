@@ -112,9 +112,9 @@ p_prior_r2 <- r2_summary %>%
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Prior-implied Bayesian " * R[trace]^2),
+       y = expression("Prior-implied " * R[trace]^2),
        colour = NULL, fill = NULL,
-       title = "Prior-implied Bayesian trace R-squared by lag order",
+       title = "Prior-implied trace R-squared by lag order",
        subtitle = "Median and 90% band; grey lines: ARR2 R2 prior median and 90% interval") +
   theme_minimal()
 
@@ -134,9 +134,9 @@ p_prior_r2_measures <- r2_summary %>%
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Prior-implied Bayesian " * R^2),
+       y = expression("Prior-implied " * R^2),
        colour = NULL, fill = NULL,
-       title = "Prior-implied Bayesian R-squared by lag order and R2 variant",
+       title = "Prior-implied R-squared by lag order and R2 variant",
        subtitle = "Median and 90% band; dashed line: ARR2 R2 prior median") +
   theme_minimal() +
   theme(legend.position = "bottom")

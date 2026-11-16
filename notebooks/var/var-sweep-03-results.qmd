@@ -188,9 +188,9 @@ p_prior_r2 <- prior_r2 %>%
   scale_x_continuous(breaks = N_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Number of variables N",
-       y = expression("Prior-implied Bayesian " * R[trace]^2),
+       y = expression("Prior-implied " * R[trace]^2),
        colour = NULL, fill = NULL,
-       title = "Prior-implied Bayesian R-squared by number of variables",
+       title = "Prior-implied R-squared by number of variables",
        subtitle = "Median and 90% band; grey lines: ARR2 R2 prior median and 90% interval") +
   theme_minimal() +
   theme(legend.position = "bottom")
@@ -216,10 +216,10 @@ p_post_r2 <- r2_summary %>%
   scale_x_continuous(breaks = N_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Number of variables N",
-       y = expression("Posterior Bayesian " * R[trace]^2),
+       y = expression("Posterior " * R[trace]^2),
        colour = NULL, fill = NULL,
-       title = "Posterior Bayesian R-squared by number of variables",
-       subtitle = "Median and 90% band; dashed: true Bayesian R2") +
+       title = "Posterior R-squared by number of variables",
+       subtitle = "Median and 90% band; dashed: true R2") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
