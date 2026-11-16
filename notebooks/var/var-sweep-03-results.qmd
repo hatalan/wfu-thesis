@@ -79,7 +79,7 @@ length(files)
 
 ```{r}
 model_labels <- c(
-  normal    = sprintf("Normal (sd = %g)", s$normal$A_sd),
+  normal    = sprintf("Independent Standard Gaussian", s$normal$A_sd),
   minnesota = "Minnesota (hierarchical)",
   arr2_flat = sprintf("ARR2 flat (prior R\u00b2 mean %.2g)", s$arr2_flat$mean_R2),
   arr2_minn = sprintf("ARR2 Minn. (prior R\u00b2 mean %.2g)", s$arr2_minn$mean_R2)
@@ -181,14 +181,13 @@ p_prior_r2 <- prior_r2 %>%
   ggplot(aes(N, med, colour = model_lab, fill = model_lab)) +
   geom_hline(yintercept = arr2_ref[2], linetype = "dashed", colour = "grey40") +
   geom_hline(yintercept = arr2_ref[c(1, 3)], linetype = "dotted", colour = "grey40") +
-  geom_ribbon(aes(ymin = q05, ymax = q95), alpha = 0.12, colour = NA) +
   geom_line() +
   geom_point() +
   facet_wrap(~ p_lab, nrow = 1) +
   scale_x_continuous(breaks = N_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Number of variables N",
-       y = expression("Prior-implied " * R[trace]^2),
+       y = expression("Prior-implied mean " * R[trace]^2),
        colour = NULL, fill = NULL,
        title = "Prior-implied R-squared by number of variables",
        subtitle = "Median and 90% band; grey lines: ARR2 R2 prior median and 90% interval") +

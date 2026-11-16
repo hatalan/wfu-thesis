@@ -106,13 +106,12 @@ p_prior_r2 <- r2_summary %>%
   ggplot(aes(p, r2_med, colour = model_lab, fill = model_lab)) +
   geom_hline(yintercept = arr2_ref[2], linetype = "dashed", colour = "grey40") +
   geom_hline(yintercept = arr2_ref[c(1, 3)], linetype = "dotted", colour = "grey40") +
-  geom_ribbon(aes(ymin = r2_q05, ymax = r2_q95), alpha = 0.12, colour = NA) +
   geom_line() +
   geom_point() +
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Lag order p",
-       y = expression("Prior-implied " * R[trace]^2),
+       y = expression("Prior-implied mean " * R[trace]^2),
        colour = NULL, fill = NULL,
        title = "Prior-implied trace R-squared by lag order",
        subtitle = "Median and 90% band; grey lines: ARR2 R2 prior median and 90% interval") +

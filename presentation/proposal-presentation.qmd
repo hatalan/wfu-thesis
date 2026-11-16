@@ -27,16 +27,19 @@ format:
 An AR($p$) model for a single series:
 
 $$
+\Large
 y_t = \sum_{i=1}^{p} \phi_i\, y_{t-i} + \varepsilon_t, \qquad \varepsilon_t \sim N(0, \sigma^2)
 $$
 
 - The value of the series at time $t$ is a linear function of the last $p$ values of the series plus a shock, $\varepsilon_t$.
+- We assume that the process is stationary.
 
 ## Vector autoregressions
 
 A VAR($p$) for $N$ series:
 
 $$
+\Large
 \mathbf{y}_t = \sum_{i=1}^{p} \mathbf{A}_i\, \mathbf{y}_{t-i} + \mathbf{u}_t, \qquad \mathbf{u}_t \sim N(\mathbf{0}, \Sigma)
 $$
 
@@ -48,20 +51,28 @@ $$
 
 ## Bayesian R^2^
 
-From [@gelman2019r2], we have a notion of R^2^ where a model can be split (generally) into systematic and random components. In the case of an AR($p$) model:
+:::{.fragment}  
+
+From @gelman2019r2, we have a notion of R^2^ where a model can be split (generally) into systematic and random components. In the case of an AR($p$) model:
 
 $$
 y_t \;=\; \underbrace{\sum_{i=1}^{p} \phi_i\, y_{t-i}}_{\textstyle \mu_t \;\text{(systematic)}}
 \;+\; \underbrace{\varepsilon_t}_{\textstyle \text{random}} \qquad \varepsilon_t \sim N(0, \sigma^2)
 $$
 
-Then taking the ratio, which can be calculated per posterior (or prior) draw:
+:::
+
+:::{.fragment}
+
+Then taking the ratio, which can be taken over the posterior (or prior):
 
 $$
-R^2 = \frac{\operatorname{Var}(\mu_{t})}{\operatorname{Var}(\mu_{t}) + \sigma^2}
+R^2 = \frac{\operatorname{Var}(\mu_{t})}{\operatorname{Var}(\mu_{t}) + \sigma^2}.
 $$
 
-This gives a full distribution for R^2^. From here on, $R^2$ uses this definition.
+This gives a full distribution for $R^2$.
+
+:::
 
 # Bayesian VARs {background-color="#9E7E38"}
 
@@ -84,18 +95,23 @@ $$
 \begin{bmatrix} \sigma_1^2 & \sigma_{12} \\ \sigma_{12} & \sigma_2^2 \end{bmatrix}\right)
 $$
 
-- We need to specify prior distributions for coefficient and innovation covariance matrices
+- We need to specify a distribution for the likelihood, and prior distributions for coefficient and shock covariance matrices.
 - There are many ways to do this!
 
 ## Two common priors
 
-**Independent Gaussian:** $a^{(i)}_{nk}$ for every coefficient.
+:::{.fragment}
+
+**Independent Gaussian:** $a^{(i)}_{nk}\sim N (0, \sigma^2)$ for every coefficient.
+
+:::
+:::{.fragment}
 
 **Minnesota:** Informative prior first introduced in the 1980s [@litterman1986] using heuristic plug-ins, and eventually parameterized with hyperpriors as in @giannone2015prior and @chan2021minnesota:
 
 $$
-a^{(i)}_{nn}\sim N \left(0, \frac{\lambda}{i^{d}}\right)\ \qquad
-a^{(i)}_{ng}\sim N \left(0, \frac{\lambda\,\theta}{i^{d}}\right) \quad (g \ne n)
+a^{(i)}_{nn}\sim N \left(0, \left(\frac{\lambda}{i^{d}}\right)^{2}\right) \qquad
+a^{(i)}_{ng}\sim N \left(0, \left(\frac{\lambda\,\theta}{i^{d}}\right)^{2}\right) \quad (g \ne n)
 $$
 
 - $\lambda$: overall tightness
@@ -104,23 +120,35 @@ $$
 
 The Minnesota prior is designed to put greater prior mass on own-lag and more recent lag coefficients (that is, the series is similar to a random walk).
 
+:::
+
 # R2D2 and ARR2 {background-color="#9E7E38"}
 
 ## R2D2: A prior on model fit
 
+:::{.fragment}
+
 First parameterized for linear regression [@zhang2022r2d2], and since then extended to multilevel models [@aguilar2023r2d2m2] and generalized linear mixed models [@yanchenko2025r2d2glmm].
 
-$\operatorname{Var}(\mu_i)$ can (by conditional independence and assuming coefficient prior mean of 0) be written as $\sum\operatorname{Var}(x_j)\operatorname{Var}(\beta_j)$, so we can set the coefficient prior variances equal to a constant $c$ times the components of a Dirichlet vector, to reduce the sum:
+:::
+:::{.fragment}
+
+$\operatorname{Var}(\mu_i)$ can (by conditional independence and assuming coefficient prior mean of 0) be written as $\sum_p\operatorname{Var}(x_j)\operatorname{Var}(\beta_j)$, so we can set the coefficient prior variances equal to $\frac{c\,\psi_j}{\operatorname{Var}(x_j)}$ where $c$ is some constant and $\boldsymbol{\psi}\sim \operatorname{Dir}(\xi_1, \dots, \xi_p)$, to reduce the sum:
 
 $$
-\operatorname{Var}(\mu_i) = \sum_{j=1}^n \operatorname{Var}(x_j)\operatorname{Var}(\beta_j) = \sum_{j=1}^n \operatorname{Var}(x_j)\ c\ \psi_j = c \sum_{j=1}^n \operatorname{Var}(x_j)
+\operatorname{Var}(\mu_i) = \sum_{j=1}^p \operatorname{Var}(x_j)\operatorname{Var}(\beta_j)
+= \sum_{j=1}^p \operatorname{Var}(x_j)\,\frac{c\,\psi_j}{\operatorname{Var}(x_j)}
+= c \sum_{j=1}^p \psi_j = \sigma^2\tau^2
 $$
 
-and letting $c = \frac{\sigma^2}{\sum\operatorname{Var}(x_j)}\tau^2$, and plugging into $R^2$:
+by setting $c = \sigma^2\tau^2$. Substituting into $R^2$:
 
 $$
 R^2 = \frac{\operatorname{Var}(\mu_i)}{\operatorname{Var}(\mu_i) + \sigma^2} = \frac{\tau^2}{\tau^2 + 1}.
 $$
+
+:::
+:::{.fragment}
 
 This induces the following prior on each $\beta_j$:
 
@@ -128,9 +156,11 @@ $$
 \beta_j \sim N\!\left(0,\; \frac{\sigma^2}{\operatorname{Var}(x_j)}\,\tau^2\,\psi_j\right)
 $$
 
+:::
+
 ## R2D2: A prior on model fit
 
-The full prior is:
+The full model is:
 
 $$
 \begin{aligned}
@@ -144,12 +174,11 @@ R^2_{\text{prior}} &\sim \operatorname{Beta}\!\left(\mu_{R^2}, \varphi_{R^2}\rig
 \end{aligned}
 $$
 
-- A global variance "knob" ($R^2_{\text{prior}}$) is allocated across the prior, and total prior explained variance remains consistent as the model expands. @riha2026select uses R2D2 as an example when formalizing this idea.
-- R2D2 has since been extended to multilevel models [@aguilar2023r2d2m2], generalized linear mixed models [@yanchenko2025r2d2glmm] and autoregressions [@kohns2025arr2].
+- A global variance "knob" ($R^2_{\text{prior}}$) is allocated across the prior, and total prior explained variance remains consistent as the model expands. @riha2026select use R2D2 as an example when formalizing this idea.
 
 ## ARR2: R2D2 for autoregressions
 
-@kohns2025arr2 extends this construction to different classes of AR models:
+@kohns2025arr2 extend this construction to different classes of AR models:
 
 $$
 \begin{aligned}
@@ -163,32 +192,47 @@ R^2_{\text{prior}} &\sim \operatorname{Beta}\!\left(\mu_{R^2}, \varphi_{R^2}\rig
 $$
 
 - $\hat\sigma^2_{y_t}$ is a plug-in variance used to resolve mathematical and computational complexity.
-- The prior assumes the series is stationary, but does not enforce it.
+- The prior assumes the series is stationary, but does not enforce it (see @heaps2023stationarity for stationary-enforcing priors).
 
 # ARR2 in the AR case {background-color="#9E7E38"}
 
 ## What does $R^2_{\text{prior}}$ control?
 
-To examine the properties of the prior, we can consider R^2^ under the prior predictive distribution. From the prior derivation, we have
+:::{.fragment}
+
+To examine the properties of the prior, we can consider prior predictive $R^2$ given data. From the prior derivation, we have
 
 $$
-E_{\mathbf{\phi}}\!\left[\operatorname{Var}(\mu_t)\right] \approx \sigma^2\tau^2.
+E_{\mathbf{\phi}}\!\left[\operatorname{Var}(\mu_t)\right] = \sigma^2\tau^2,
 $$
 
-Substituting the expected value into our definition of R^2^, it follows
+so the marginal prior predictive $\left[\operatorname{Var}(\mu_t)\right]$ is controlled exactly.
+
+:::
+
+:::{.fragment}
+
+Substituting this marginal systematic variance into our definition of R^2^, it follows
 
 $$
-\frac{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right]}{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right] + \sigma^2} \approx \frac{\tau^2}{1 + \tau^2} = R^2_{\text{prior}}
+\frac{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right]}{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right] + \sigma^2} = \frac{\tau^2}{1 + \tau^2} = R^2_{\text{prior}}.
 $$
 
-That is, the prior is controlling $R^2$ after integrating out the autoregressive coefficients in $\operatorname{Var}(\mu_t)$. However, taking $E_\mathbf{\phi}\ \![R^2]$. Instead, we have
+:::
+
+:::{.fragment}
+
+However, taking $E_\mathbf{\phi}\ \![R^2]$, we have
 
 $$
 E_\mathbf{\phi}\ \![R^2] = E_\mathbf{\phi}\!\left[\frac{\operatorname{Var}(\mu_{t})}{\operatorname{Var}(\mu_{t}) + \sigma^2}\right]
 \leq \frac{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right]}{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right] + \sigma^2}
-\approx R^2_{\text{prior}}
+= R^2_{\text{prior}}
 $$
-by Jensen's inequality.
+
+by Jensen's inequality. So, the marginal prior predictive $E_\mathbf{\phi}\ \![R^2]$ is bounded by $R^2_{\text{prior}}$.
+
+:::
 
 ## AR results: Implied Prior R^2^
 
@@ -200,25 +244,32 @@ This is demonstrated in simulation:
 
 ## Why a trace R^2^?
 
+:::{.fragment}
+
 ARR2's supplementary VAR extension places an $R^2_{\text{prior}}$ on each equation separately:
 
 - Each equation's fit is controlled, but adding variables adds equations, and with them more total prior variance.
 - The equations are set up recursively, so the prior depends on how the variables are ordered.
 
-We use trace R^2^ to summarize total fit for the whole system under a reduced-form VAR:
+:::
+
+:::{.fragment}
+
+We use trace R^2^ to summarize total fit for the whole system under a reduced-form VAR($p$):
 
 $$
 R^2_{\text{trace}} = \frac{\sum_n \operatorname{Var}(\mu_{n,t})}{\sum_n \operatorname{Var}(\mu_{n,t}) + \operatorname{tr}(\Sigma)}
-= \sum_n w_n R^2_n
 $$
 
-- This can be interpreted as a weighted sum of equation-level R^2^.
+- This can be interpreted as a variance-weighted sum of equation-level R^2^.
 - A single $R^2_{\text{prior}}$ sets the system-level total variance (as summarized by $R^2_{\text{trace}}$), and Dirichlet weights split it across equations, lags, and cross terms.
 - The trace is linear, so the R2D2 and ARR2 arguments carry over directly: $E\!\left[\sum_n \operatorname{Var}(\mu_{n,t})\right] = \operatorname{tr}(\Sigma)\,\tau^2$.
 
-## A trace R² prior for VARs
+:::
 
-The trace R^2^ parameterization is as follows:
+## A trace $R^2$ prior for VARs
+
+The $R^2_{\text{trace}}$ parameterization is as follows:
 
 $$
 \begin{aligned}
@@ -232,43 +283,21 @@ R^2_{\text{prior}} &\sim \operatorname{Beta}\!\left(\mu_{R^2}, \varphi_{R^2}\rig
 \end{aligned}
 $$
 
-## Simulation design
-
-## Prior fit as lags are added
+## Prior-implied fit as lags are added
 
 ![](../notebooks/var/figures/var-sweep-01/var_prior_r2_by_p.png){fig-alt="Prior-implied R² by lag order" fig-align="center" width="72%"}
 
-[Simulations run in Stan.]
-
-## Prior fit as variables are added
+## Prior-implied fit as variables are added
 
 ![](../notebooks/var/figures/var-sweep-03/var_prior_r2_by_N.png){fig-alt="Prior-implied R² by number of variables" fig-align="center" width="78%"}
 
-[Simulations run in Stan.]
-
-## Posterior coefficients: Baseline VAR(2)
-
-Fitted with $p = 12$: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
+## Posterior coefficients: VAR(2) Data-generating Process
 
 ![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="64%"}
 
-## Posterior coefficients: Long decay, VAR(6)
-
-Fitted with $p = 12$: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
-
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_long_decay.png){fig-alt="Posterior coefficients by lag, long-decay VAR(6)" fig-align="center" width="64%"}
-
-## Posterior coefficients: Sparse, lags 1 and 4
-
-Fitted with $p = 12$: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
+## Posterior coefficients: Sparse, VAR(4) Data-generating Process
 
 ![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="64%"}
-
-## Posterior coefficients: Near unit root
-
-Fitted with $p = 12$: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
-
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_near_unit_root.png){fig-alt="Posterior coefficients by lag, near unit root" fig-align="center" width="64%"}
 
 ## References
 
