@@ -194,7 +194,7 @@ by Jensen's inequality.
 
 This is demonstrated in simulation:
 
-![](../notebooks/ar/figures/prior_sim_r2_means.png){fig-alt="Prior means of R² prior, implied process R² and R² by lag order" fig-align="center" width="85%"}
+![](../notebooks/ar/figures/prior_sim_r2_means.png){fig-alt="Prior means of R² prior and R² by lag order" fig-align="center" width="85%"}
 
 # Extending ARR2 to VARs {background-color="#9E7E38"}
 
@@ -246,29 +246,29 @@ $$
 
 [Simulations run in Stan.]
 
-## Posterior coefficients by lag
+## Posterior coefficients: Baseline VAR(2)
 
-Fitted with $p = 12$ to four true lag structures: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
+Fitted with $p = 12$: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
 
-::: {.panel-tabset}
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="64%"}
 
-### Baseline VAR(2)
+## Posterior coefficients: Long decay, VAR(6)
 
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="55%"}
+Fitted with $p = 12$: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
 
-### Long decay (VAR(6))
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_long_decay.png){fig-alt="Posterior coefficients by lag, long-decay VAR(6)" fig-align="center" width="64%"}
 
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_long_decay.png){fig-alt="Posterior coefficients by lag, long-decay VAR(6)" fig-align="center" width="55%"}
+## Posterior coefficients: Sparse, lags 1 and 4
 
-### Sparse (lags 1 and 4)
+Fitted with $p = 12$: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
 
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="55%"}
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="64%"}
 
-### Near unit root
+## Posterior coefficients: Near unit root
 
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_near_unit_root.png){fig-alt="Posterior coefficients by lag, near unit root" fig-align="center" width="55%"}
+Fitted with $p = 12$: posterior mean and 90% interval; × marks the true value.^[Simulations run in Stan.]
 
-:::
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_near_unit_root.png){fig-alt="Posterior coefficients by lag, near unit root" fig-align="center" width="64%"}
 
 ## References
 

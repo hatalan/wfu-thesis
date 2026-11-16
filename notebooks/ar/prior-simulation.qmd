@@ -121,11 +121,11 @@ p_means <- summ %>%
       str_detect(config, "2/3") ~ "Beta(6, 3): mean 2/3"
     )
   ) %>%
-  pivot_longer(c(prior_mean, exact_mean, next_mean, next_mean_stat),
+  pivot_longer(c(prior_mean, next_mean, next_mean_stat),
                names_to = "measure", values_to = "mean") %>%
   mutate(measure = factor(
     measure,
-    levels = c("prior_mean", "exact_mean", "next_mean", "next_mean_stat")
+    levels = c("prior_mean", "next_mean", "next_mean_stat")
   )) %>%
   ggplot(aes(p, mean, colour = measure, linetype = dirichlet)) +
   geom_line() +
@@ -134,10 +134,10 @@ p_means <- summ %>%
   scale_x_continuous(breaks = p_grid) +
   scale_y_continuous(limits = c(0, 1)) +
   # Notation as in the presentation: R2_prior = the ARR2 Beta parameter,
-  # R2_proc = implied process R2 (r2_exact), R2 = Bayesian R2 on the observed lags (r2_next)
+  # R2 = Bayesian R2 on the observed lags (r2_next). The implied process R2 (exact_mean)
+  # is still computed in summ but not plotted.
   scale_colour_discrete(labels = expression(
     R[prior]^2,
-    R[proc]^2 ~ "(stationary draws)",
     R^2 ~ "(all draws)",
     R^2 ~ "(stationary draws)")) +
   labs(x = "Lag order p", y = expression("Prior mean of " * R^2),
