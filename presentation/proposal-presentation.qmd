@@ -125,7 +125,7 @@ First parameterized for linear regression [@zhang2022r2d2], and since then exten
 :::
 :::{.fragment}
 
-$\operatorname{Var}(\mu_i)$ can (by conditional independence and assuming coefficient prior mean of 0) be written as $\sum^{p}_{j=1}\operatorname{Var}(x_j)\operatorname{Var}(\beta_j)$, so we can set the coefficient prior variances equal to $\frac{c\,\psi_j}{\operatorname{Var}(x_j)}$ where $c$ is some constant and $\boldsymbol{\psi}\sim \operatorname{Dir}(\xi_1, \dots, \xi_p)$, to reduce the sum and by setting $c = \sigma^2\tau^2$:
+$\operatorname{Var}(\mu_i)$ can (by conditional independence and assuming coefficient prior mean of 0) be written as $\sum^{p}_{j=1}\operatorname{Var}(x_j)\operatorname{Var}(\beta_j)$, so we can set the coefficient prior variances equal to $\frac{c\,\psi_j}{\operatorname{Var}(x_j)}$ where $c$ is some constant and $\boldsymbol{\psi}\sim \operatorname{Dir}(\xi_1, \dots, \xi_p)$, and by setting $c = \sigma^2\tau^2$:
 
 $$
 \operatorname{Var}(\mu_i) = \sum_{j=1}^p \operatorname{Var}(x_j)\operatorname{Var}(\beta_j)
@@ -168,7 +168,7 @@ y_i &\sim N\!\left(\alpha + \mathbf{x}_i^\top \boldsymbol\beta,\; \sigma^2\right
 \boldsymbol\psi &\sim \operatorname{Dir}(\xi_1, \dots, \xi_p) \\[4pt]
 \tau^2 &= \frac{R^2_{\text{prior}}}{1 - R^2_{\text{prior}}} \\[4pt]
 R^2_{\text{prior}} &\sim \operatorname{Beta}\!\left(\mu_{R^2}, \varphi_{R^2}\right) \\[4pt]
-\sigma &\sim \pi(\sigma)\\[4pt]
+\sigma^2 &\sim \pi(\sigma^2)\\[4pt]
 \alpha &\sim \pi(\alpha)\\[4pt]
 \end{aligned}
 $$
@@ -186,12 +186,11 @@ y_t &\sim N\!\left(\sum_{i=1}^{p} \phi_i\, y_{t-i},\; \sigma^2\right) \\[4pt]
 \boldsymbol\psi &\sim \operatorname{Dir}(\xi_1, \dots, \xi_p) \\[4pt]
 \tau^2 &= \frac{R^2_{\text{prior}}}{1 - R^2_{\text{prior}}} \\[4pt]
 R^2_{\text{prior}} &\sim \operatorname{Beta}\!\left(\mu_{R^2}, \varphi_{R^2}\right) \\[4pt]
-\sigma &\sim \pi(\sigma)\\[4pt]
+\sigma^2 &\sim \pi(\sigma^2)\\[4pt]
 \end{aligned}
 $$
 
 - $\hat\sigma^2_{y_t}$ is a plug-in variance used to resolve mathematical and computational complexity.
-- The prior assumes the series is stationary, but does not enforce it (see @heaps2023stationarity for stationary-enforcing priors).
 
 ## What does $R^2_{\text{prior}}$ control? {section-label="ARR2 in the AR case"}
 
