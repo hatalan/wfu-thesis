@@ -37,23 +37,22 @@ $divider: #9E7E38;             // section divider background
   margin-bottom: 0.25em;
 }
 
-// Key result box: wrap an equation in `::: keybox`
+// Key result box: wrap an equation in `::: keybox`. Shrinks to the equation's
+// width, with tight padding and no extra space from the display math.
 .reveal .keybox {
+  width: fit-content;
+  margin: 0.3em auto;
+  padding: 0 0.8em;
   background: #f6f1e6;
-  border-left: 6px solid $divider;
+  border-left: 5px solid $divider;
   border-radius: 4px;
-  padding: 0.1em 1em;
-  margin: 0.6em 0;
+  p { margin: 0; }
+  mjx-container[display="true"] { margin: 0.2em 0 !important; }
 }
 
 // References: smaller type so the list fits on one slide
 .reveal .slides section.refs #refs {
   font-size: 0.85em;
-}
-
-// Footer: quiet grey
-.reveal .footer {
-  color: #6c757d;
 }
 
 // Title slide: left-aligned title with a thin Old Gold rule underneath

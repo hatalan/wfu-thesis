@@ -9,7 +9,6 @@ bibliography: references.bib
 format:
   revealjs:
     slide-number: true
-    footer: "Nicholas Hatala · Thesis Proposal"
     width: 1600
     height: 900
     margin: 0.04
