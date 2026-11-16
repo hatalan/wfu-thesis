@@ -305,13 +305,14 @@ coef_truth_df <- coef_truth %>%
   unnest(tr) %>%
   mutate(coef_lab = coef_label(row, col))
 
-plot_coefs <- function(g) {
-  ggplot(filter(coef_plot_df, dgp == g),
+plot_coefs <- function(g, own_only = FALSE) {
+  keep <- function(d) if (own_only) filter(d, row == col) else d
+  ggplot(keep(filter(coef_plot_df, dgp == g)),
          aes(lag, est, colour = model_lab)) +
     geom_hline(yintercept = 0, colour = "grey70") +
     geom_pointrange(aes(ymin = q05, ymax = q95),
                     position = position_dodge(width = 0.7), size = 0.2) +
-    geom_point(data = filter(coef_truth_df, dgp == g), aes(lag, truth),
+    geom_point(data = keep(filter(coef_truth_df, dgp == g)), aes(lag, truth),
                inherit.aes = FALSE, shape = 4, size = 2.5, stroke = 1) +
     facet_wrap(~ coef_lab, ncol = 2) +
     scale_x_continuous(breaks = seq_len(p_show)) +
@@ -324,6 +325,8 @@ plot_coefs <- function(g) {
 }
 
 p_coefs <- map(set_names(s$dgps), plot_coefs)
+# Own lags only, for the presentation slides
+p_coefs_own <- map(set_names(s$dgps), plot_coefs, own_only = TRUE)
 ```
 
 ```{r}
@@ -339,6 +342,7 @@ source("../slide-theme.R")   # slide versions (larger text, no titles) for the p
 save_slide(p_r2_trace, file.path(fig_dir, "var_post_r2_trace_by_dgp.png"), height = 6.5, base_size = 16)
 ggsave(file.path(fig_dir, "var_post_r2_measures_by_dgp.png"), p_r2_measures, width = 11, height = 9, dpi = 150)
 save_slide(p_rmse, file.path(fig_dir, "var_coef_rmse_by_dgp.png"), height = 6.5, base_size = 16)
-iwalk(p_coefs, ~ save_slide(.x, file.path(fig_dir, sprintf("var_coefs_p%02d_%s.png", p_show, .y)),
-                            height = 6.5, base_size = 20))
+# Slide versions: own lags only, no grid lines
+iwalk(p_coefs_own, ~ save_slide(.x, file.path(fig_dir, sprintf("var_coefs_p%02d_%s.png", p_show, .y)),
+                                height = 5.5, base_size = 20, grid = FALSE))
 ```

@@ -1,5 +1,5 @@
 ---
-title: "R^2^-based Priors for Bayesian Vector Autoregressions"
+title: "$R^2$-based Priors for Bayesian Vector Autoregressions"
 subtitle: "Thesis Proposal"
 author: "Nicholas Hatala (advisor: Dr. Collin Cademartori)"
 institute: "Department of Statistical Sciences, Wake Forest University"
@@ -47,13 +47,13 @@ $$
 - The number of coefficients grows quadratically as $N$ increases (there are $N^2 p$ coefficients). With $N = 8$ and $p = 4$, we already have 256 coefficients.
 - Time series (in macroeconomics, social science data) often have low series length, so shrinkage is necessary for stable coefficient estimates.
 
-# What is R^2^ in a time series? {background-color="#9E7E38"}
+# What is $R^2$ in a time series? {background-color="#9E7E38"}
 
-## Bayesian R^2^
+## Bayesian $R^2$
 
 :::{.fragment}  
 
-From @gelman2019r2, we have a notion of R^2^ where a model can be split (generally) into systematic and random components. In the case of an AR($p$) model:
+From @gelman2019r2, we have a notion of $R^2$ where a model can be split (generally) into systematic and random components. In the case of an AR($p$) model:
 
 $$
 y_t \;=\; \underbrace{\sum_{i=1}^{p} \phi_i\, y_{t-i}}_{\textstyle \mu_t \;\text{(systematic)}}
@@ -212,7 +212,7 @@ so the marginal prior predictive $\left[\operatorname{Var}(\mu_t)\right]$ is con
 
 :::{.fragment}
 
-Substituting this marginal systematic variance into our definition of R^2^, it follows
+Substituting this marginal systematic variance into our definition of $R^2$, it follows
 
 $$
 \frac{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right]}{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right] + \sigma^2} = \frac{\tau^2}{1 + \tau^2} = R^2_{\text{prior}}.
@@ -234,7 +234,7 @@ by Jensen's inequality. So, the marginal prior predictive $E_\mathbf{\phi}\ \![R
 
 :::
 
-## AR results: Implied Prior R^2^
+## AR results: Implied Prior $R^2$
 
 This is demonstrated in simulation:
 
@@ -242,7 +242,7 @@ This is demonstrated in simulation:
 
 # Extending ARR2 to VARs {background-color="#9E7E38"}
 
-## Why a trace R^2^?
+## Why a trace $R^2$?
 
 :::{.fragment}
 
@@ -255,13 +255,13 @@ ARR2's supplementary VAR extension places an $R^2_{\text{prior}}$ on each equati
 
 :::{.fragment}
 
-We use trace R^2^ to summarize total fit for the whole system under a reduced-form VAR($p$):
+We use trace $R^2$ to summarize total fit for the whole system under a reduced-form VAR($p$):
 
 $$
 R^2_{\text{trace}} = \frac{\sum_n \operatorname{Var}(\mu_{n,t})}{\sum_n \operatorname{Var}(\mu_{n,t}) + \operatorname{tr}(\Sigma)}
 $$
 
-- This can be interpreted as a variance-weighted sum of equation-level R^2^.
+- This can be interpreted as a variance-weighted sum of equation-level $R^2$.
 - A single $R^2_{\text{prior}}$ sets the system-level total variance (as summarized by $R^2_{\text{trace}}$), and Dirichlet weights split it across equations, lags, and cross terms.
 - The trace is linear, so the R2D2 and ARR2 arguments carry over directly: $E\!\left[\sum_n \operatorname{Var}(\mu_{n,t})\right] = \operatorname{tr}(\Sigma)\,\tau^2$.
 
@@ -293,11 +293,11 @@ $$
 
 ## Posterior coefficients: VAR(2) Data-generating Process
 
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="64%"}
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="85%"}
 
 ## Posterior coefficients: Sparse, VAR(4) Data-generating Process
 
-![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="64%"}
+![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="85%"}
 
 ## References
 
