@@ -14,7 +14,7 @@ format:
     margin: 0.04
     incremental: false
     smaller: true
-    scrollable: true
+    scrollable: false
     embed-resources: true
     html-math-method: mathjax
     theme: [default, wfu.scss]
@@ -133,7 +133,7 @@ First parameterized for linear regression [@zhang2022r2d2], and since then exten
 :::
 :::{.fragment}
 
-$\operatorname{Var}(\mu_i)$ can (by conditional independence and assuming coefficient prior mean of 0) be written as $\sum_p\operatorname{Var}(x_j)\operatorname{Var}(\beta_j)$, so we can set the coefficient prior variances equal to $\frac{c\,\psi_j}{\operatorname{Var}(x_j)}$ where $c$ is some constant and $\boldsymbol{\psi}\sim \operatorname{Dir}(\xi_1, \dots, \xi_p)$, to reduce the sum:
+$\operatorname{Var}(\mu_i)$ can (by conditional independence and assuming coefficient prior mean of 0) be written as $\sum^{p}_{j=1}\operatorname{Var}(x_j)\operatorname{Var}(\beta_j)$, so we can set the coefficient prior variances equal to $\frac{c\,\psi_j}{\operatorname{Var}(x_j)}$ where $c$ is some constant and $\boldsymbol{\psi}\sim \operatorname{Dir}(\xi_1, \dots, \xi_p)$, to reduce the sum and by setting $c = \sigma^2\tau^2$:
 
 $$
 \operatorname{Var}(\mu_i) = \sum_{j=1}^p \operatorname{Var}(x_j)\operatorname{Var}(\beta_j)
@@ -141,19 +141,24 @@ $$
 = c \sum_{j=1}^p \psi_j = \sigma^2\tau^2
 $$
 
-by setting $c = \sigma^2\tau^2$. Substituting into $R^2$:
+
+:::
+:::{.fragment}
+
+Substituting into $R^2$:
 
 $$
 R^2 = \frac{\operatorname{Var}(\mu_i)}{\operatorname{Var}(\mu_i) + \sigma^2} = \frac{\tau^2}{\tau^2 + 1}.
 $$
 
 :::
+
 :::{.fragment}
 
 This induces the following prior on each $\beta_j$:
 
 $$
-\beta_j \sim N\!\left(0,\; \frac{\sigma^2}{\operatorname{Var}(x_j)}\,\tau^2\,\psi_j\right)
+\beta_j \sim N\!\left(0,\; \frac{\sigma^2}{\operatorname{Var}(x_j)}\,\tau^2\,\psi_j\right).
 $$
 
 :::
@@ -206,7 +211,7 @@ $$
 E_{\mathbf{\phi}}\!\left[\operatorname{Var}(\mu_t)\right] = \sigma^2\tau^2,
 $$
 
-so the marginal prior predictive $\left[\operatorname{Var}(\mu_t)\right]$ is controlled exactly.
+so the marginal prior predictive $\operatorname{Var}(\mu_t)$ is controlled exactly.
 
 :::
 
@@ -261,7 +266,11 @@ $$
 R^2_{\text{trace}} = \frac{\sum_n \operatorname{Var}(\mu_{n,t})}{\sum_n \operatorname{Var}(\mu_{n,t}) + \operatorname{tr}(\Sigma)}
 $$
 
-- This can be interpreted as a variance-weighted sum of equation-level $R^2$.
+:::
+
+:::{.fragment}
+
+- This can be interpreted as a variance-weighted average of equation-level $R^2$.
 - A single $R^2_{\text{prior}}$ sets the system-level total variance (as summarized by $R^2_{\text{trace}}$), and Dirichlet weights split it across equations, lags, and cross terms.
 - The trace is linear, so the R2D2 and ARR2 arguments carry over directly: $E\!\left[\sum_n \operatorname{Var}(\mu_{n,t})\right] = \operatorname{tr}(\Sigma)\,\tau^2$.
 
@@ -274,9 +283,9 @@ The $R^2_{\text{trace}}$ parameterization is as follows:
 $$
 \begin{aligned}
 \mathbf{y}_t &\sim N\!\left(\sum_{i=1}^{p} \mathbf{A}_i\, \mathbf{y}_{t-i},\; \Sigma\right), \qquad [\mathbf{A}_i]_{nn} = \phi_{n,i}, \quad [\mathbf{A}_i]_{ng} = \beta_{n,i,g} \;\; (g \ne n) \\[4pt]
-\phi_{n,i} &\sim N\!\left(0,\; \frac{\operatorname{tr}(\Sigma)}{\operatorname{Var}(y_{n,t})}\,\tau^2\,w_1\,\psi_{n,i}\right)\\[4pt]
-\beta_{n,i,g} &\sim N\!\left(0,\; \frac{\operatorname{tr}(\Sigma)}{\operatorname{Var}(y_{g,t})}\,\tau^2\,w_2\,\gamma_{n,i,g}\right)\\[4pt]
-\mathbf{w} &\sim \operatorname{Dir}(\xi_{\text{split}}), \qquad \boldsymbol\psi \sim \operatorname{Dir}(\boldsymbol\xi_{\text{own}}), \qquad \boldsymbol\gamma \sim \operatorname{Dir}(\boldsymbol\xi_{\text{cross}}) \\[4pt]
+\phi_{n,i} &\sim N\!\left(0,\; \frac{\operatorname{tr}(\Sigma)}{\hat\sigma^2_{y_{n,t}}}\,\tau^2\,w_1\,\psi_{n,i}\right)\\[4pt]
+\beta_{n,i,g} &\sim N\!\left(0,\; \frac{\operatorname{tr}(\Sigma)}{\hat\sigma^2_{y_{g,t}}}\,\tau^2\,w_2\,\gamma_{n,i,g}\right)\\[4pt]
+\mathbf{w} &\sim \operatorname{Dir}(\boldsymbol\xi_{\text{split}}), \qquad \boldsymbol\psi \sim \operatorname{Dir}(\boldsymbol\xi_{\text{own}}), \qquad \boldsymbol\gamma \sim \operatorname{Dir}(\boldsymbol\xi_{\text{cross}}) \\[4pt]
 \tau^2 &= \frac{R^2_{\text{prior}}}{1 - R^2_{\text{prior}}} \\[4pt]
 R^2_{\text{prior}} &\sim \operatorname{Beta}\!\left(\mu_{R^2}, \varphi_{R^2}\right) \\[4pt]
 \Sigma &\sim \pi(\Sigma)\\[4pt]
@@ -287,17 +296,33 @@ $$
 
 ![](../notebooks/var/figures/var-sweep-01/var_prior_r2_by_p.png){fig-alt="Prior-implied R² by lag order" fig-align="center" width="72%"}
 
+::: aside
+Prior predictive draws for VAR($p$) in Stan, $R^2$ computed on $T = 150$ simulated observations.
+:::
+
 ## Prior-implied fit as variables are added
 
 ![](../notebooks/var/figures/var-sweep-03/var_prior_r2_by_N.png){fig-alt="Prior-implied R² by number of variables" fig-align="center" width="78%"}
 
-## Posterior coefficients: VAR(2) Data-generating Process
+::: aside
+Prior predictive draws for VAR($p$) in Stan,  $R^2$ computed on $T = 150$ simulated observations.
+:::
+
+## Posterior coefficients: VAR(2) DGP
 
 ![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="85%"}
 
-## Posterior coefficients: Sparse, VAR(4) Data-generating Process
+::: aside
+VAR(12) fit in Stan on $T = 150$ observations with a common sample across models.
+:::
+
+## Posterior coefficients: Sparse, VAR(4) DGP
 
 ![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="85%"}
+
+::: aside
+VAR(12) fit in Stan on $T = 150$ observations with a common sample across models.
+:::
 
 ## References
 

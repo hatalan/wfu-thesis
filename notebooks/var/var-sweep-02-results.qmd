@@ -77,7 +77,7 @@ length(files)
 
 ```{r}
 model_labels <- c(
-  normal    = sprintf("Normal (sd = %g)", s$normal$A_sd),
+  normal    = sprintf("Independent Standard Gaussian", s$normal$A_sd),
   minnesota = "Minnesota (hierarchical)",
   arr2_flat = sprintf("ARR2 flat (prior R\u00b2 mean %.2g)", s$arr2_flat$mean_R2),
   arr2_minn = sprintf("ARR2 Minn. (prior R\u00b2 mean %.2g)", s$arr2_minn$mean_R2)
@@ -286,7 +286,7 @@ p_rmse
 p_show <- max(p_grid)
 
 coef_label <- function(row, col) {
-  ifelse(row == col, sprintf("y%d on own lags", row), sprintf("y%d on lags of y%d", row, col))
+  ifelse(row == col, sprintf("Y%d on own lags", row), sprintf("Y%d on lags of y%d", row, col))
 }
 
 coef_plot_df <- coef_summary %>%
@@ -316,7 +316,7 @@ plot_coefs <- function(g, own_only = FALSE) {
                inherit.aes = FALSE, shape = 4, size = 2.5, stroke = 1) +
     facet_wrap(~ coef_lab, ncol = 2) +
     scale_x_continuous(breaks = seq_len(p_show)) +
-    labs(x = "Lag", y = "Coefficient (standardized scale)", colour = NULL,
+    labs(x = "Lag", y = "Coefficient", colour = NULL,
          title = sprintf("Estimated coefficients against the truth: %s", dgp_labels[g]),
          subtitle = sprintf("Fitted with p = %d; posterior mean and 90%% interval; x: true value",
                             p_show)) +
@@ -332,7 +332,7 @@ p_coefs_own <- map(set_names(s$dgps), plot_coefs, own_only = TRUE)
 ```{r}
 #| fig-width: 10
 #| fig-height: 7
-walk(p_coefs, print)
+walk(p_coefs_own, print)
 ```
 
 ## Save figures
