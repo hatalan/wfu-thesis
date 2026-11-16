@@ -237,10 +237,6 @@ $$
 
 ![](../notebooks/var/figures/var-sweep-01/var_prior_r2_by_p.png){fig-alt="Prior-implied Bayesian R² by lag order" fig-align="center" width="85%"}
 
-## Posterior R^2^ vs. lag order
-
-![](../notebooks/var/figures/var-sweep-02/var_post_r2_trace_by_dgp.png){fig-alt="Posterior Bayesian R² by lag order, for each true lag structure" fig-align="center" width="90%"}
-
 ## Prior fit as variables are added
 
 ![](../notebooks/var/figures/var-sweep-03/var_prior_r2_by_N.png){fig-alt="Prior-implied Bayesian R² by number of variables" fig-align="center" width="95%"}
