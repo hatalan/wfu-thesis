@@ -72,7 +72,7 @@ This gives a full distribution for $R^2$.
 
 ## Bayesian VARs {section-label="Bayesian VARs"}
 
-Writing out a two-equation, VAR(2):
+Writing out a two-equation VAR(2):
 
 $$
 \begin{bmatrix} y_{1,t} \\ y_{2,t} \end{bmatrix}
@@ -296,7 +296,7 @@ Prior predictive draws for VAR($p$) in Stan, $R^2$ computed on $T = 150$ simulat
 ![](../notebooks/var/figures/var-sweep-03/var_prior_r2_by_N.png){fig-alt="Prior-implied R² by number of variables" fig-align="center" width="78%"}
 
 ::: aside
-Prior predictive draws for VAR($p$) in Stan,  $R^2$ computed on $T = 150$ simulated observations.
+Prior predictive draws for VAR($p$) in Stan, $R^2$ computed on $T = 150$ simulated observations.
 :::
 
 ## Posterior coefficients: VAR(2) DGP {section-label="Extending ARR2 to VARs"}
