@@ -304,7 +304,7 @@ Prior predictive draws for VAR($p$) in Stan,  $R^2$ computed on $T = 150$ simula
 ![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="80%"}
 
 ::: aside
-VAR(12) fit in Stan on $T = 150$ simulated observations with a common sample across models.
+VAR(12) fit in Stan on $T = 150$ simulated observations with a common sample across models. Posterior means with 90% credible intervals. Crosses are true values.
 :::
 
 ## Posterior coefficients: Sparse, VAR(4) DGP {section-label="Extending ARR2 to VARs"}
@@ -312,7 +312,7 @@ VAR(12) fit in Stan on $T = 150$ simulated observations with a common sample acr
 ![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="80%"}
 
 ::: aside
-VAR(12) fit in Stan on $T = 150$ simulated observations with a common sample across models.
+VAR(12) fit in Stan on $T = 150$ simulated observations with a common sample across models. Posterior means with 90% credible intervals. Crosses are true values.
 :::
 
 ## References {.refs}
