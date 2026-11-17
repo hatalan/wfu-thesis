@@ -30,7 +30,7 @@ y_t = \sum_{i=1}^{p} \phi_i\, y_{t-i} + \varepsilon_t, \qquad \varepsilon_t \sim
 $$
 
 - The value of the series at time $t$ is a linear function of the last $p$ values of the series plus a shock, $\varepsilon_t$.
-- We assume that the process is stationary.
+- We assume the process is stationary.
 
 ## Vector autoregressions {section-label="AR and VAR models"}
 
@@ -53,7 +53,7 @@ From @gelman2019r2, we have a notion of $R^2$ where a model can be split (genera
 
 $$
 y_t \;=\; \underbrace{\sum_{i=1}^{p} \phi_i\, y_{t-i}}_{\textstyle \mu_t \;\text{(systematic)}}
-\;+\; \underbrace{\varepsilon_t}_{\textstyle \text{random}} \qquad \varepsilon_t \sim N(0, \sigma^2)
+\;+\; \underbrace{\varepsilon_t}_{\textstyle \text{random}}
 $$
 
 :::
@@ -63,7 +63,7 @@ $$
 Then taking the ratio, which can be taken over the posterior (or prior):
 
 $$
-R^2 = \frac{\operatorname{Var}(\mu_{t})}{\operatorname{Var}(\mu_{t}) + \sigma^2}.
+R^2 = \frac{\operatorname{Var}(\mu_{t})}{\operatorname{Var}(\mu_{t}) + \operatorname{Var}(\varepsilon_t)}.
 $$
 
 This gives a full distribution for $R^2$.
@@ -208,7 +208,7 @@ so the marginal prior predictive $\operatorname{Var}(\mu_t)$ is controlled exact
 
 :::{.fragment}
 
-Substituting this marginal systematic variance into our definition of $R^2$, it follows
+Substituting this into our definition of $R^2$, it follows
 
 $$
 \frac{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right]}{E_\mathbf{\phi}\!\left[\operatorname{Var}(\mu_t)\right] + \sigma^2} = \frac{\tau^2}{1 + \tau^2} = R^2_{\text{prior}}.
@@ -232,7 +232,7 @@ by Jensen's inequality. So, the marginal prior predictive $E_\mathbf{\phi}\ \![R
 
 :::
 
-## AR results: Implied Prior $R^2$ {section-label="ARR2 in the AR case"}
+## Implied prior $R^2$ {section-label="ARR2 in the AR case"}
 
 This is demonstrated in simulation:
 
@@ -262,8 +262,8 @@ $$
 :::{.fragment}
 
 - This can be interpreted as a variance-weighted average of equation-level $R^2$.
-- A single $R^2_{\text{prior}}$ sets the system-level total variance (as summarized by $R^2_{\text{trace}}$), and Dirichlet weights split it across equations, lags, and cross terms.
-- The trace is linear, so the R2D2 and ARR2 arguments carry over directly: $E\!\left[\sum_n \operatorname{Var}(\mu_{n,t})\right] = \operatorname{tr}(\Sigma)\,\tau^2$.
+- A single $R^2_{\text{prior}}$ sets the system-level marginal explained variance (as summarized by $R^2_{\text{trace}}$), and Dirichlet weights split it across equations, lags, and cross terms.
+- The trace is linear, so the R2D2 and ARR2 arguments carry over directly: $\sum_n \operatorname{Var}(\mu_{n,t}) = \operatorname{tr}(\Sigma)\,\tau^2$.
 
 :::
 
@@ -304,7 +304,7 @@ Prior predictive draws for VAR($p$) in Stan,  $R^2$ computed on $T = 150$ simula
 ![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_baseline.png){fig-alt="Posterior coefficients by lag, baseline VAR(2)" fig-align="center" width="80%"}
 
 ::: aside
-VAR(12) fit in Stan on $T = 150$ observations with a common sample across models.
+VAR(12) fit in Stan on $T = 150$ simulated observations with a common sample across models.
 :::
 
 ## Posterior coefficients: Sparse, VAR(4) DGP {section-label="Extending ARR2 to VARs"}
@@ -312,7 +312,7 @@ VAR(12) fit in Stan on $T = 150$ observations with a common sample across models
 ![](../notebooks/var/figures/var-sweep-02/var_coefs_p12_sparse.png){fig-alt="Posterior coefficients by lag, sparse lags 1 and 4" fig-align="center" width="80%"}
 
 ::: aside
-VAR(12) fit in Stan on $T = 150$ observations with a common sample across models.
+VAR(12) fit in Stan on $T = 150$ simulated observations with a common sample across models.
 :::
 
 ## References {.refs}
