@@ -263,7 +263,7 @@ $$
 
 - This can be interpreted as a variance-weighted average of equation-level $R^2$.
 - A single $R^2_{\text{prior}}$ sets the system-level marginal explained variance (as summarized by $R^2_{\text{trace}}$), and Dirichlet weights split it across equations, lags, and cross terms.
-- The trace is linear, so the R2D2 and ARR2 arguments carry over directly: $\sum_n \operatorname{Var}(\mu_{n,t}) = \operatorname{tr}(\Sigma)\,\tau^2$.
+- The trace is linear, so the R2D2 and ARR2 arguments carry over directly.
 
 :::
 

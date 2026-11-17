@@ -26,7 +26,7 @@ dgp    <- truth$dgp
 N_grid <- s$N_grid
 p_grid <- s$p_grid
 
-qsum <- function(x) tibble(med = median(x), q05 = unname(quantile(x, 0.05)),
+qsum <- function(x) tibble(mean = mean(x), med = median(x), q05 = unname(quantile(x, 0.05)),
                            q95 = unname(quantile(x, 0.95)))
 
 summarise_fit <- function(f) {
@@ -91,7 +91,7 @@ label_p     <- function(p) factor(sprintf("p = %d", p), levels = sprintf("p = %d
 avg_reps <- function(x, ...) {
   x %>%
     group_by(mode, N, p, model, ...) %>%
-    summarise(across(c(med, q05, q95), mean), n_rep = n(), .groups = "drop") %>%
+    summarise(across(any_of(c("mean", "med", "q05", "q95")), mean), n_rep = n(), .groups = "drop") %>%
     mutate(model_lab = label_model(model), p_lab = label_p(p))
 }
 
@@ -178,9 +178,8 @@ prior_r2 <- r2_summary %>%
   avg_reps()
 
 p_prior_r2 <- prior_r2 %>%
-  ggplot(aes(N, med, colour = model_lab, fill = model_lab)) +
-  geom_hline(yintercept = arr2_ref[2], linetype = "dashed", colour = "grey40") +
-  geom_hline(yintercept = arr2_ref[c(1, 3)], linetype = "dotted", colour = "grey40") +
+  ggplot(aes(N, mean, colour = model_lab, fill = model_lab)) +
+  geom_hline(yintercept = s$arr2_flat$mean_R2, linetype = "dashed", colour = "grey40") +
   geom_line() +
   geom_point() +
   facet_wrap(~ p_lab, nrow = 1) +
@@ -190,7 +189,7 @@ p_prior_r2 <- prior_r2 %>%
        y = expression("Prior-implied mean " * R[trace]^2),
        colour = NULL, fill = NULL,
        title = "Prior-implied R-squared by number of variables",
-       subtitle = "Median and 90% band; grey lines: ARR2 R2 prior median and 90% interval") +
+       subtitle = "Mean over prior draws; dashed line: mean of the R2 prior") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
